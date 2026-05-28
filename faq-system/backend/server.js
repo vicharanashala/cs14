@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+const authRoutes = require("./routes/authRoutes");
 
 dotenv.config();
 
@@ -14,6 +15,8 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log("MongoDB error", err));
+
+app.use("/auth", authRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
