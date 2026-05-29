@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
+import StatusBadge from "../components/StatusBadge";
 
 const CATEGORIES = [
   "All", "Academics", "Hostel", "Finance", "Library", "Sports",
@@ -271,9 +272,7 @@ export default function DiscussionPage() {
                       <span className={`text-xs px-2 py-0.5 rounded ${CATEGORY_COLORS[d.category] || "bg-gray-100 text-gray-700"}`}>
                         {d.category}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLORS[d.status] || "bg-gray-100 text-gray-600"}`}>
-                        {d.status}
-                      </span>
+                      <StatusBadge status={d.status} />
                       {hasVerifiedAnswer(d) && (
                         <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-medium">
                           ✓ Admin Verified

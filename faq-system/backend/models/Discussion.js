@@ -4,6 +4,7 @@ const answerSchema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   content: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
+  upvotes: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 

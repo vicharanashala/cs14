@@ -56,38 +56,42 @@ router.patch("/discussions/:id/verify-answer", async (req, res) => {
 
 // PATCH /admin/discussions/:id/approve
 router.patch("/discussions/:id/approve", async (req, res) => {
-  try {
-    const { answerId } = req.body;
+  console.log("--- 1. APPROVE ROUTE STARTED ---");
+  console.log("Discussion ID:", req.params.id);
+  console.log("Answer ID:", req.body.answerId);
+  console.log("Admin User Object:", req.user);
 
-    // Step 1: Find the discussion
+  try {
     const discussion = await Discussion.findById(req.params.id);
     if (!discussion) {
       return res.status(404).json({ message: "Discussion not found" });
     }
+    console.log("--- 2. DISCUSSION FOUND ---", discussion.title);
 
-    // Step 2: Find the selected answer within the sorted array
-    const sortedAnswers = [...discussion.answers].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
-    const answer = sortedAnswers.find(a => a._id.toString() === answerId);
+    const answer = discussion.answers.id(req.body.answerId);
     if (!answer) {
       return res.status(404).json({ message: "Answer not found" });
     }
+    console.log("--- 3. ANSWER FOUND ---", answer.content);
 
-    // Step 3: Create the FAQ — never delete discussion before FAQ is saved
     const newFaq = new Faq({
       question: discussion.title,
       answer: answer.content,
       category: discussion.category,
-      createdByAdmin: req.user.userId,
+      createdByAdmin: req.user?.userId || req.user?.id || req.user?._id || null,
       status: "approved",
     });
+
+    console.log("--- 4. ATTEMPTING TO SAVE FAQ ---");
     await newFaq.save();
+    console.log("--- 5. FAQ SAVED SUCCESSFULLY ---");
 
-    // Step 4: Delete the original discussion from Discussion collection
     await Discussion.findByIdAndDelete(req.params.id);
+    console.log("--- 6. OLD DISCUSSION DELETED ---");
 
-    // Step 5: Return success response
     res.json({ message: "FAQ created and discussion removed", faq: newFaq });
   } catch (err) {
+    console.error("💥 BACKEND CRASHED! ERROR DETAILS:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });

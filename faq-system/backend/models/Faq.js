@@ -24,6 +24,7 @@ const faqSchema = new mongoose.Schema({
   },
   createdByAdmin: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   upvotes: { type: Number, default: 0 },
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   createdAt: { type: Date, default: Date.now },
 });
 

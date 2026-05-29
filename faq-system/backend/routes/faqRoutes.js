@@ -59,6 +59,7 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
       answer,
       category,
       createdByAdmin: req.user.userId,
+      status: "approved",
     });
 
     await faq.save();
@@ -68,7 +69,54 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
-// DELETE /faqs/:id
+// PATCH /faqs/:id/approve
+router.patch("/:id/approve", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const faq = await Faq.findById(req.params.id);
+    if (!faq) {
+      return res.status(404).json({ message: "FAQ not found" });
+    }
+    faq.status = "approved";
+    await faq.save();
+    res.json({ message: "FAQ approved", faq });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+// PATCH /faqs/:id/approve
+router.patch("/:id/approve", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const faq = await Faq.findById(req.params.id);
+    if (!faq) {
+      return res.status(404).json({ message: "FAQ not found" });
+    }
+    faq.status = "approved";
+    await faq.save();
+    res.json({ message: "FAQ approved", faq });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// PATCH /faqs/:id
+router.patch("/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { question, answer, category, status } = req.body;
+    const faq = await Faq.findById(req.params.id);
+    if (!faq) {
+      return res.status(404).json({ message: "FAQ not found" });
+    }
+    if (question !== undefined) faq.question = question;
+    if (answer !== undefined) faq.answer = answer;
+    if (category !== undefined) faq.category = category;
+    if (status !== undefined) faq.status = status;
+    await faq.save();
+    res.json({ message: "FAQ updated", faq });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
   try {
     const faq = await Faq.findByIdAndDelete(req.params.id);
