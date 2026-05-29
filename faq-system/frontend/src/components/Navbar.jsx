@@ -3,6 +3,8 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import CommandPalette from "./CommandPalette";
+import { toast } from "./Toast";
+import api from "../api/axios";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: "home" },
@@ -63,7 +65,7 @@ const ICONS = {
 };
 
 export default function Navbar() {
-  const { currentUser, isAdmin, logout } = useAuth();
+  const { currentUser, isAdmin, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [showPalette, setShowPalette] = useState(false);
@@ -81,7 +83,7 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const handleLogout = () => { logout(); navigate("/login"); setUserMenuOpen(false); };
+  const handleLogout = () => { logout(); navigate("/"); setUserMenuOpen(false); };
 
   return (
     <>
@@ -124,6 +126,7 @@ export default function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2 ml-auto">
+
           {/* Search trigger */}
           <button
             onClick={() => setShowPalette(true)}
@@ -151,10 +154,10 @@ export default function Navbar() {
                 className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-[rgb(var(--bg-hover))] border border-[rgb(var(--border-default))] hover:border-[rgb(var(--border-strong))] transition-colors"
               >
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                  {currentUser.username[0].toUpperCase()}
+                  {(currentUser.username || currentUser.email || "User")[0].toUpperCase()}
                 </div>
                 <span className="text-sm font-medium text-[rgb(var(--text-primary))] hidden sm:block">
-                  {currentUser.username}
+                  {currentUser.username || currentUser.email || "User"}
                 </span>
                 {isAdmin && (
                   <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
@@ -168,7 +171,7 @@ export default function Navbar() {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-52 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl shadow-xl z-50 overflow-hidden animate-scale-in">
                     <div className="px-4 py-3 border-b border-[rgb(var(--border-default))]">
-                      <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">{currentUser.username}</p>
+                      <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">{currentUser.username || currentUser.email || "User"}</p>
                       <p className="text-xs text-[rgb(var(--text-tertiary))]">{currentUser.email || "Signed in"}</p>
                     </div>
                     {isAdmin && (

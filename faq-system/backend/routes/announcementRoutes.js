@@ -36,4 +36,27 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
+// PUT /announcements/:id
+router.put("/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    const updated = await Announcement.findByIdAndUpdate(req.params.id, { title, content }, { new: true });
+    if (!updated) return res.status(404).json({ message: "Announcement not found" });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// DELETE /announcements/:id
+router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const deleted = await Announcement.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Announcement not found" });
+    res.json({ message: "Announcement deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
 module.exports = router;

@@ -3,13 +3,7 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, ChevronDown, X, Filter, ArrowUpDown } from "lucide-react";
 import api from "../api/axios";
 import AppLayout from "../components/AppLayout";
-
-const CATEGORIES = [
-  "All", "About the Internship", "Timing and Dates", "NOC",
-  "Selection and Offer Letter", "Work and Mentorship", "Communication Channels",
-  "Interviews", "Certificate", "Rosetta", "Phase 1 and Coursework",
-  "Yaksha Chat", "ViBe Platform", "Team Formation",
-];
+import { useCategories } from "../context/CategoryContext";
 
 const SORT_OPTIONS = [
   { value: "views", label: "Most Viewed" },
@@ -61,6 +55,8 @@ function FaqRow({ faq, highlight }) {
 }
 
 export default function AllFaqsPage() {
+  const { categories } = useCategories();
+  const finalCategories = ["All", ...categories.map((c) => c.name)];
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialQuery = searchParams.get("q") || "";
@@ -187,9 +183,8 @@ export default function AllFaqsPage() {
 
         {/* Filters row */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
-          {/* Category pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {CATEGORIES.map((cat) => (
+            {finalCategories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleCategoryChange(cat)}

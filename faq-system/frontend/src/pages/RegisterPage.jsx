@@ -65,7 +65,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">👤</span>
                 <input name="username" value={form.username} onChange={handleChange}
-                  placeholder="Choose a username" className="input-base pl-10" />
+                  placeholder="Choose a username" className="input-base" style={{ paddingLeft: "2.75rem" }} />
               </div>
             </div>
 
@@ -74,7 +74,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">✉</span>
                 <input name="email" type="email" value={form.email} onChange={handleChange}
-                  placeholder="you@example.com" className="input-base pl-10" autoComplete="email" />
+                  placeholder="you@example.com" className="input-base" style={{ paddingLeft: "2.75rem" }} autoComplete="email" />
               </div>
             </div>
 
@@ -83,7 +83,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">🔒</span>
                 <input name="password" type={showPw ? "text" : "password"} value={form.password}
-                  onChange={handleChange} placeholder="Min. 6 characters" className="input-base pl-10 pr-10" />
+                  onChange={handleChange} placeholder="Min. 6 characters" className="input-base" style={{ paddingLeft: "2.75rem", paddingRight: "2.75rem" }} />
                 <button type="button" onClick={() => setShowPw((v) => !v)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-secondary))] text-sm transition-colors">
                   {showPw ? "🙈" : "👁"}
@@ -96,7 +96,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">🔒</span>
                 <input name="confirmPassword" type={showPw ? "text" : "password"} value={form.confirmPassword}
-                  onChange={handleChange} placeholder="Repeat your password" className="input-base pl-10" />
+                  onChange={handleChange} placeholder="Repeat your password" className="input-base" style={{ paddingLeft: "2.75rem" }} />
               </div>
             </div>
 

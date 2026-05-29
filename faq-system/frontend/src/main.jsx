@@ -5,13 +5,16 @@ import "./index.css";
 import App from "./App.jsx";
 import AuthProvider from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import CategoryProvider from "./context/CategoryContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <CategoryProvider>
+            <App />
+          </CategoryProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

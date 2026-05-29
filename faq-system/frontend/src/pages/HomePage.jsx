@@ -1,201 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Tag, MessageCircle, Users, Search, TrendingUp, ChevronRight, Megaphone, X, AlertCircle, MessageSquare, ExternalLink } from "lucide-react";
+import { BookOpen, Tag, MessageCircle, Users, Search, TrendingUp, ChevronRight, Megaphone, X, AlertCircle, MessageSquare, ExternalLink, HelpCircle, Send } from "lucide-react";
 import api from "../api/axios";
+import Navbar from "../components/Navbar";
+import ToastContainer, { toast } from "../components/Toast";
+import { useCategories } from "../context/CategoryContext";
 
-const CATEGORIES = [
-  { name: "About the Internship", icon: "🏢", desc: "Overview, eligibility, expectations", count: 12 },
-  { name: "Timing and Dates", icon: "📅", desc: "Important dates and deadlines", count: 5 },
-  { name: "NOC", icon: "📄", desc: "No Objection Certificate queries", count: 13 },
-  { name: "Selection and Offer Letter", icon: "🎓", desc: "Selection process and offers", count: 26 },
-  { name: "Work and Mentorship", icon: "💼", desc: "Roles, responsibilities, mentors", count: 4 },
-  { name: "Communication Channels", icon: "📡", desc: "Slack, email, emergency contacts", count: 2 },
-  { name: "Interviews", icon: "🎤", desc: "Interview process and tips", count: 0 },
-  { name: "Certificate", icon: "📜", desc: "Certificate issuance and details", count: 0 },
-  { name: "Rosetta", icon: "🔤", desc: "Language learning platform", count: 5 },
-  { name: "Phase 1 and Coursework", icon: "📚", desc: "Course structure and grading", count: 8 },
-  { name: "Yaksha Chat", icon: "💬", desc: "Yaksha platform questions", count: 0 },
-  { name: "ViBe Platform", icon: "💻", desc: "ViBe tool and features", count: 21 },
-  { name: "Team Formation", icon: "🏗️", desc: "Team setup and collaboration", count: 17 },
-];
-
-const STATS = [
-  { label: "Total FAQs", value: "105+", icon: BookOpen, color: "from-indigo-500 to-blue-500" },
-  { label: "Categories", value: "13", icon: Tag, color: "from-purple-500 to-pink-500" },
-  { label: "Discussions", value: "6", icon: MessageCircle, color: "from-amber-500 to-orange-500" },
-  { label: "Weekly Users", value: "200+", icon: Users, color: "from-emerald-500 to-teal-500" },
-];
-
-const FEATURES = [
-  {
-    icon: "🔍",
-    title: "Smart Search",
-    desc: "Find answers instantly with our AI-powered search across all categories.",
-  },
-  {
-    icon: "💬",
-    title: "Community Discussions",
-    desc: "Ask questions, share experiences, and get answers from fellow interns.",
-  },
-  {
-    icon: "✅",
-    title: "Vetted Answers",
-    desc: "Every FAQ is verified by the admin team before publication.",
-  },
-  {
-    icon: "📊",
-    title: "Real-time Updates",
-    desc: "Stay current with the latest announcements and policy changes.",
-  },
-];
-
-// ── Notice Board Widget ──────────────────────────────────────
-function NoticeBoard({ announcements }) {
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const [paused, setPaused] = useState(false);
-
-  // Timer — must stay after all useState calls (Rules of Hooks)
-  useEffect(() => {
-    if (!visible || paused || announcements.length <= 1) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % announcements.length), 4000);
-    return () => clearInterval(t);
-  }, [visible, paused, announcements.length]);
-
-  if (!announcements.length || !visible) return null;
-
-  const current = announcements[idx];
-  const next = () => setIdx((i) => (i + 1) % announcements.length);
-  const prev = () => setIdx((i) => (i - 1 + announcements.length) % announcements.length);
-
-  return (
-    <div className="mb-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-2xl overflow-hidden">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-amber-200 dark:bg-amber-900/50 border-b border-amber-300 dark:border-amber-700">
-        <div className="flex items-center gap-2">
-          <Megaphone size={13} className="text-amber-800 dark:text-amber-300" />
-          <span className="text-[11px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">Notice Board</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {announcements.length > 1 && (
-            <div className="flex items-center gap-1">
-              <button onClick={prev} className="w-5 h-5 rounded flex items-center justify-center hover:bg-amber-300 dark:hover:bg-amber-800 transition-colors text-[10px] font-bold text-amber-800 dark:text-amber-200">‹</button>
-              <span className="text-[10px] text-amber-700 dark:text-amber-300 min-w-[20px] text-center">{idx + 1}/{announcements.length}</span>
-              <button onClick={next} className="w-5 h-5 rounded flex items-center justify-center hover:bg-amber-300 dark:hover:bg-amber-800 transition-colors text-[10px] font-bold text-amber-800 dark:text-amber-200">›</button>
-            </div>
-          )}
-          <button onClick={() => setVisible(false)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-amber-300 dark:hover:bg-amber-800 transition-colors">
-            <X size={10} className="text-amber-700 dark:text-amber-300" />
-          </button>
-        </div>
-      </div>
-      {/* Content */}
-      <div
-        className="px-4 py-3 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
-        onClick={() => {}}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        <p className="text-xs font-bold text-gray-900 dark:text-amber-50">{current.title}</p>
-        <p className="text-[11px] text-gray-700 dark:text-amber-200 mt-0.5 line-clamp-2 leading-relaxed">{current.content}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Trending FAQs ─────────────────────────────────────────────
-function TrendingFaqs({ faqs }) {
-  const navigate = useNavigate();
-  if (!faqs.length) return null;
-  return (
-    <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 flex items-center justify-center">
-            <TrendingUp size={15} className="text-red-500" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-[rgb(var(--text-primary))]">Trending FAQs</h2>
-            <p className="text-[11px] text-[rgb(var(--text-tertiary))]">Most viewed questions this week</p>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate("/all-faqs")}
-          className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
-        >
-          View all <ChevronRight size={12} />
-        </button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {faqs.map((faq) => (
-          <button
-            key={faq._id}
-            onClick={() => navigate(`/faqs/${encodeURIComponent(faq.category || "General")}?highlight=${faq._id}`)}
-            className="group text-left bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4 card-hover"
-          >
-            <div className="flex items-start gap-2.5 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center shrink-0 mt-0.5">
-                <TrendingUp size={12} className="text-amber-600 dark:text-amber-400" />
-              </div>
-              <p className="text-xs font-semibold text-[rgb(var(--text-primary))] group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors leading-snug line-clamp-2">
-                {faq.question}
-              </p>
-            </div>
-            {faq.answer && (
-              <p className="text-[11px] text-[rgb(var(--text-tertiary))] line-clamp-2 ml-9 leading-relaxed">{faq.answer}</p>
-            )}
-            <div className="flex items-center gap-2 mt-2 ml-9">
-              <span className="text-[10px] text-[rgb(var(--text-tertiary))]">{faq.category}</span>
-              <span className="text-[10px] text-[rgb(var(--text-tertiary))]">·</span>
-              <span className="text-[10px] text-[rgb(var(--text-tertiary))]">{faq.views || 0} views</span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ── Can't Find Answer CTA ─────────────────────────────────────
-function CantFindCta() {
-  return (
-    <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 sm:p-10 text-center text-white relative overflow-hidden">
-        {/* decorative circles */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="relative">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-4">
-            <AlertCircle size={22} color="white" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black mb-2">Can't find your answer?</h2>
-          <p className="text-indigo-200 text-sm max-w-md mx-auto mb-6 leading-relaxed">
-            Didn't find what you were looking for? Reach out to the community or contact an admin for personalized help.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="/discussions"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white text-indigo-700 text-sm font-bold hover:bg-indigo-50 transition-colors shadow-lg"
-            >
-              <MessageSquare size={15} />
-              Ask the Community
-            </a>
-            <a
-              href="mailto:support@vicharanashala.com"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl border border-white/30 text-white text-sm font-bold hover:bg-white/10 transition-colors"
-            >
-              <ExternalLink size={15} />
-              Contact Support
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Main HomePage ─────────────────────────────────────────────
 export default function HomePage() {
+  const { categories } = useCategories();
   const [announcements, setAnnouncements] = useState([]);
   const [categoryFaqs, setCategoryFaqs] = useState({});
   const [allFaqs, setAllFaqs] = useState([]);
@@ -203,15 +15,30 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
+  const [showNotice, setShowNotice] = useState(true);
   const searchRef = useRef(null);
   const navigate = useNavigate();
+
+  // Recommendations tab state
+  const [activeRecTab, setActiveRecTab] = useState("noc");
+
+  // Chatbot state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState([
+    { role: "bot", content: "Hello! I am your IIT Ropar Internship Assistant. How can I help you today?" }
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Inquiry form state
+  const [inquiry, setInquiry] = useState({ name: "", email: "", message: "" });
+  const [submittingInquiry, setSubmittingInquiry] = useState(false);
 
   useEffect(() => {
     Promise.all([
       api.get("/announcements").catch(() => ({ data: [] })),
       api.get("/faqs?limit=200").catch(() => ({ data: [] })),
     ]).then(([announcementsData, faqsData]) => {
-      // axios interceptor unwraps response.data, so these are already arrays
       const announcementsArr = Array.isArray(announcementsData) ? announcementsData : (announcementsData?.data || []);
       const faqsArr = Array.isArray(faqsData) ? faqsData : (faqsData?.data || []);
       setAnnouncements(announcementsArr.slice(0, 3));
@@ -226,17 +53,22 @@ export default function HomePage() {
     });
   }, []);
 
-  // Trending = top viewed
+  // Feeds
   const trendingFaqs = [...allFaqs]
+    .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+    .slice(0, 4);
+
+  const mostSearched = [...allFaqs]
     .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 5);
+    .slice(0, 4);
+
+  const recentlyAnswered = [...allFaqs]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 4);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    setSearchResults(null);
-    setShowResults(false);
-    // Navigate to all-faqs page with search query
     navigate(`/all-faqs?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
@@ -247,7 +79,7 @@ export default function HomePage() {
     const results = allFaqs.filter(f =>
       f.question?.toLowerCase().includes(q.toLowerCase()) ||
       f.answer?.toLowerCase().includes(q.toLowerCase())
-    ).slice(0, 6);
+    ).slice(0, 5);
     setSearchResults(results);
     setShowResults(true);
   };
@@ -261,191 +93,311 @@ export default function HomePage() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Chatbot query submit
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userMsg = chatInput.trim();
+    setChatMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+    setChatInput("");
+    setIsTyping(true);
+
+    setTimeout(() => {
+      // client-side simple matching
+      const matches = allFaqs.filter(f =>
+        f.question?.toLowerCase().includes(userMsg.toLowerCase()) ||
+        (f.answer || "").toLowerCase().includes(userMsg.toLowerCase())
+      ).slice(0, 3);
+
+      let reply = "";
+      let links = [];
+
+      if (matches.length > 0) {
+        reply = "I found some relevant FAQs that might help you:";
+        links = matches.map(m => ({
+          title: m.question,
+          path: `/faqs/${encodeURIComponent(m.category)}?highlight=${m._id}`
+        }));
+      } else {
+        reply = "I couldn't find a direct match. Try checking the Discussions forum or submit a query to get admin support!";
+      }
+
+      setChatMessages((prev) => [...prev, { role: "bot", content: reply, links }]);
+      setIsTyping(false);
+    }, 1200);
+  };
+
+  // Inquiry form submit
+  const handleInquirySubmit = (e) => {
+    e.preventDefault();
+    if (!inquiry.name.trim() || !inquiry.email.trim() || !inquiry.message.trim()) {
+      toast({ type: "warning", message: "Please fill in all fields" });
+      return;
+    }
+    setSubmittingInquiry(true);
+    setTimeout(() => {
+      toast({ type: "success", message: "Inquiry submitted! We will respond via email shortly." });
+      setInquiry({ name: "", email: "", message: "" });
+      setSubmittingInquiry(false);
+    }, 1000);
+  };
+
+  // Simulated Recommendations data
+  const REC_DATA = {
+    noc: [
+      { q: "Do I need a signature on my NOC?", a: "Yes, it must be signed by the Head of Department (HOD) or Placement Officer." },
+      { q: "Where do I submit the NOC document?", a: "Upload the signed NOC as a PDF to the Rosetta submission panel under Phase 1." }
+    ],
+    mentorship: [
+      { q: "How often should I meet my internship mentor?", a: "We recommend a weekly check-in, or bi-weekly at minimum." },
+      { q: "What should I do if my mentor is unresponsive?", a: "Notify the program coordinators via the communication channel immediately." }
+    ],
+    dates: [
+      { q: "Is the final presentation date flexible?", a: "No, dates are locked by the IIT Ropar internship committee. Check the timeline tab." },
+      { q: "When will certificates be issued?", a: "Within 4 weeks after the submission of your final project report." }
+    ]
+  };
+
   return (
-    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-default))]">
-        <div className="orb-gradient w-96 h-96 bg-indigo-500 top-0 left-1/4" />
-        <div className="orb-gradient w-72 h-72 bg-purple-500 top-10 right-1/4" />
-        <div className="orb-gradient w-64 h-64 bg-pink-500 bottom-0 left-1/2" />
+    <div className="min-h-screen bg-[rgb(var(--bg-base))] flex flex-col">
+      <Navbar />
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
-          {/* Announcement banner — high contrast fix */}
-          {announcements.length > 0 && (
-            <div className="mb-10 flex items-start gap-3 p-4 bg-amber-200 dark:bg-amber-900/40 border border-amber-400 dark:border-amber-700 rounded-2xl animate-fade-in">
-              <span className="text-lg mt-0.5 shrink-0">📌</span>
-              <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-amber-50">{announcements[0].title}</p>
-                <p className="text-xs text-gray-700 dark:text-amber-200 mt-0.5 line-clamp-2">{announcements[0].content}</p>
+      {/* ── Notice Board Banner (Very Top) ── */}
+      {showNotice && announcements.length > 0 && (
+        <div className="bg-[rgb(var(--color-primary))] text-white px-4 py-3 relative z-40 shadow-md">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Megaphone size={16} className="text-[rgb(var(--color-accent))] shrink-0 animate-bounce" />
+              <div className="text-xs sm:text-sm font-medium">
+                <span className="font-bold font-display uppercase mr-2 tracking-wider bg-black/20 px-2 py-0.5 rounded-full text-[10px]">Announcement:</span>
+                {announcements[0].title} — <span className="opacity-90">{announcements[0].content}</span>
               </div>
             </div>
-          )}
+            <button onClick={() => setShowNotice(false)} className="text-white hover:text-cyan-200 transition-colors p-1">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
-          {/* Hero text */}
-          <div className="text-center max-w-3xl mx-auto mb-14 animate-fade-in-up">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-700 text-xs font-semibold text-indigo-800 dark:text-indigo-200 mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              Live · Updated May 2025
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[rgb(var(--text-primary))] leading-tight mb-5">
-              Everything you need to
-              <span className="text-gradient block">know about your internship</span>
-            </h1>
-            <p className="text-lg text-[rgb(var(--text-secondary))] mb-8 max-w-xl mx-auto">
-              The central knowledge base for all interns. Browse verified FAQs, join discussions, and find answers fast.
-            </p>
+      {/* ── Hero Section ── */}
+      <section className="relative bg-[rgb(var(--bg-surface))] py-20 border-b border-[rgb(var(--border-default))]">
+        {/* Background blobs wrapper with overflow-hidden to prevent layout leakage */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-[rgba(0,131,143,0.1)] rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-[rgba(0,176,255,0.08)] rounded-full blur-3xl" />
+        </div>
 
-            {/* Hero Search Input */}
-            <form onSubmit={handleSearch} ref={searchRef} className="relative max-w-xl mx-auto mb-8">
-              <div className="flex items-center bg-[rgb(var(--bg-surface))] border-2 border-[rgb(var(--border-default))] rounded-2xl shadow-lg shadow-indigo-100 dark:shadow-indigo-950/20 overflow-hidden focus-within:border-indigo-400 dark:focus-within:border-indigo-600 transition-colors">
-                <Search size={18} className="ml-4 mr-0 text-[rgb(var(--text-tertiary))] shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => searchResults && setShowResults(true)}
-                  placeholder="Search questions, topics, keywords..."
-                  className="flex-1 px-4 py-3.5 bg-transparent text-sm text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-tertiary))] outline-none"
-                />
-                <button
-                  type="submit"
-                  className="m-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:shadow-md transition-shadow shrink-0"
-                >
-                  Search
-                </button>
-              </div>
-              {/* Live search results dropdown */}
-              {showResults && searchResults && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl shadow-xl overflow-hidden z-20">
-                  {searchResults.length === 0 ? (
-                    <div className="p-4 text-center">
-                      <p className="text-xs text-[rgb(var(--text-tertiary))]">No results for "<span className="text-[rgb(var(--text-primary))]">{searchQuery}</span>"</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="divide-y divide-[rgb(var(--border-default))]">
-                        {searchResults.map((r) => (
-                          <button
-                            key={r._id}
-                            onClick={() => {
-                              setShowResults(false);
-                              setSearchQuery("");
-                              navigate(`/faqs/${encodeURIComponent(r.category || "General")}?highlight=${r._id}`);
-                            }}
-                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[rgb(var(--bg-hover))] transition-colors"
-                          >
-                            <Search size={13} className="text-[rgb(var(--text-tertiary))] mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-[rgb(var(--text-primary))] line-clamp-1">{r.question}</p>
-                              <p className="text-[10px] text-[rgb(var(--text-tertiary))] mt-0.5">{r.category}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => { setShowResults(false); navigate(`/all-faqs?q=${encodeURIComponent(searchQuery)}`); }}
-                        className="w-full py-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-[rgb(var(--bg-hover))] border-t border-[rgb(var(--border-default))] transition-colors"
-                      >
-                        See all results for "{searchQuery}" →
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+        <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 z-10">
+          <h1 className="text-4xl sm:text-5xl font-black text-[rgb(var(--text-primary))] mb-4 leading-tight font-display">
+            Vicharanashala FAQ Directory
+          </h1>
+          <p className="text-base text-[rgb(var(--text-secondary))] mb-8 max-w-2xl mx-auto">
+            IIT Ropar Internship support desk. Search verified FAQs, engage in student discussion forums, or connect with admins.
+          </p>
+
+          {/* Centered Search Wrapper */}
+          <div ref={searchRef} className="relative max-w-2xl mx-auto z-30">
+            <form onSubmit={handleSearch} className="relative flex items-center shadow-lg rounded-2xl overflow-hidden bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-strong))] hover:border-[rgb(var(--color-primary-hover))] transition-all">
+              <span className="absolute left-4 text-[rgb(var(--text-tertiary))]">
+                <Search size={18} />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search internship rules, timing, certificate, NOC..."
+                className="w-full pl-12 pr-24 py-4 text-sm bg-transparent border-none outline-none text-[rgb(var(--text-primary))] placeholder-[rgb(var(--text-tertiary))]"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 px-4 py-2 rounded-xl bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display hover:bg-[rgb(var(--color-primary-hover))] transition-all shadow-sm"
+              >
+                Search
+              </button>
             </form>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={() => navigate("/all-faqs")}
-                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-              >
-                Browse all FAQs →
-              </button>
-              <button
-                onClick={() => navigate("/discussions")}
-                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] text-sm font-semibold text-[rgb(var(--text-primary))] hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
-              >
-                Join discussions
-              </button>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
-            {STATS.map((stat) => {
-              const IconComponent = stat.icon;
-              return (
-              <div key={stat.label}
-                className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4 text-center hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-2 mx-auto`}>
-                  <IconComponent size={18} color="white" strokeWidth={2.5} />
+            {/* Autocomplete Predictions Card */}
+            {showResults && searchResults && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-strong))] rounded-2xl shadow-xl overflow-hidden text-left z-50 animate-scale-in">
+                <div className="p-3 border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-[rgb(var(--text-secondary))] uppercase tracking-wider">Matching Queries</span>
+                  <span className="text-[10px] text-[rgb(var(--text-tertiary))]">Press Enter to view all</span>
                 </div>
-                <p className="text-2xl font-black text-[rgb(var(--text-primary))]">{stat.value}</p>
-                <p className="text-xs text-[rgb(var(--text-tertiary))] font-medium">{stat.label}</p>
+                {searchResults.length === 0 ? (
+                  <p className="p-4 text-xs text-[rgb(var(--text-tertiary))] text-center">No matching FAQs found</p>
+                ) : (
+                  <div className="divide-y divide-[rgb(var(--border-default))] max-h-60 overflow-y-auto">
+                    {searchResults.map((f) => (
+                      <button
+                        key={f._id}
+                        onClick={() => navigate(`/faqs/${encodeURIComponent(f.category)}?highlight=${f._id}`)}
+                        className="w-full text-left p-3 hover:bg-[rgb(var(--bg-hover))] transition-colors flex items-start gap-2 text-xs"
+                      >
+                        <HelpCircle size={14} className="text-[rgb(var(--color-primary))] mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-semibold text-[rgb(var(--text-primary))] line-clamp-1">{f.question}</p>
+                          <p className="text-[10px] text-[rgb(var(--text-tertiary))] mt-0.5">{f.category}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              );
-            })}
+            )}
           </div>
         </div>
       </section>
 
-      {/* ── Notice Board ─────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-0">
-        <NoticeBoard announcements={announcements} />
-      </div>
-
-      {/* ── Trending FAQs ────────────────────────────────────── */}
-      {!loading && <TrendingFaqs faqs={trendingFaqs} />}
-
-      {/* ── Features ─────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">Built for interns, by admins</h2>
-          <p className="text-sm text-[rgb(var(--text-secondary))]">Everything you need to navigate your internship journey</p>
+      {/* ── Dynamic Feed Grid (3 Column Lists) ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Column 1: Trending FAQs */}
+        <div className="bg-[rgb(var(--bg-surface))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm flex flex-col">
+          <div className="flex items-center gap-2 mb-4 border-b border-[rgb(var(--border-default))] pb-2 shrink-0">
+            <TrendingUp size={16} className="text-[rgb(var(--color-primary))]" />
+            <h3 className="font-bold font-display text-sm text-[rgb(var(--text-primary))]">Trending FAQs</h3>
+          </div>
+          <div className="space-y-3 flex-1 overflow-y-auto max-h-72">
+            {trendingFaqs.map((f, idx) => (
+              <button
+                key={f._id}
+                onClick={() => navigate(`/faqs/${encodeURIComponent(f.category)}?highlight=${f._id}`)}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-[rgb(var(--bg-hover))] transition-all flex items-start gap-2.5"
+              >
+                <span className="text-xs font-bold text-[rgb(var(--color-primary))] mt-0.5">0{idx + 1}</span>
+                <div>
+                  <p className="text-xs font-semibold text-[rgb(var(--text-primary))] line-clamp-1">{f.question}</p>
+                  <span className="text-[10px] text-[rgb(var(--text-tertiary))]">▲ {f.upvotes || 0} votes</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-          {FEATURES.map((f) => (
-            <div key={f.title}
-              className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-5 card-hover">
-              <div className="text-2xl mb-3">{f.icon}</div>
-              <h3 className="text-sm font-bold text-[rgb(var(--text-primary))] mb-1.5">{f.title}</h3>
-              <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
+
+        {/* Column 2: Most Searched */}
+        <div className="bg-[rgb(var(--bg-surface))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm flex flex-col">
+          <div className="flex items-center gap-2 mb-4 border-b border-[rgb(var(--border-default))] pb-2 shrink-0">
+            <Search size={16} className="text-cyan-600" />
+            <h3 className="font-bold font-display text-sm text-[rgb(var(--text-primary))]">Most Searched</h3>
+          </div>
+          <div className="space-y-3 flex-1 overflow-y-auto max-h-72">
+            {mostSearched.map((f) => (
+              <button
+                key={f._id}
+                onClick={() => navigate(`/faqs/${encodeURIComponent(f.category)}?highlight=${f._id}`)}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-[rgb(var(--bg-hover))] transition-all flex items-start gap-2.5"
+              >
+                <HelpCircle size={14} className="text-cyan-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-[rgb(var(--text-primary))] line-clamp-1">{f.question}</p>
+                  <span className="text-[10px] text-[rgb(var(--text-tertiary))]">{f.views || 0} views</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Column 3: Recently Answered */}
+        <div className="bg-[rgb(var(--bg-surface))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm flex flex-col">
+          <div className="flex items-center gap-2 mb-4 border-b border-[rgb(var(--border-default))] pb-2 shrink-0">
+            <Megaphone size={16} className="text-teal-600" />
+            <h3 className="font-bold font-display text-sm text-[rgb(var(--text-primary))]">Recently Answered</h3>
+          </div>
+          <div className="space-y-3 flex-1 overflow-y-auto max-h-72">
+            {recentlyAnswered.map((f) => (
+              <button
+                key={f._id}
+                onClick={() => navigate(`/faqs/${encodeURIComponent(f.category)}?highlight=${f._id}`)}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-[rgb(var(--bg-hover))] transition-all flex items-start gap-2.5"
+              >
+                <BookOpen size={14} className="text-teal-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-[rgb(var(--text-primary))] line-clamp-1">{f.question}</p>
+                  <span className="text-[10px] text-[rgb(var(--text-tertiary))]">
+                    {new Date(f.createdAt || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── Categories ──────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      {/* ── Smart AI Recommendation Panel ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-6 shadow-sm">
+          <h3 className="text-sm font-bold font-display text-[rgb(var(--text-primary))] mb-1">Smart AI Recommendations</h3>
+          <p className="text-xs text-[rgb(var(--text-secondary))] mb-4">Personalized recommendations simulated from search history.</p>
+
+          <div className="flex gap-2 border-b border-[rgb(var(--border-default))] pb-2 mb-4">
+            <button
+              onClick={() => setActiveRecTab("noc")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-display transition-all ${
+                activeRecTab === "noc" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+              }`}
+            >
+              NOC & Submission
+            </button>
+            <button
+              onClick={() => setActiveRecTab("mentorship")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-display transition-all ${
+                activeRecTab === "mentorship" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+              }`}
+            >
+              Work & Mentorship
+            </button>
+            <button
+              onClick={() => setActiveRecTab("dates")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-display transition-all ${
+                activeRecTab === "dates" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+              }`}
+            >
+              Dates & Schedule
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {REC_DATA[activeRecTab].map((item, idx) => (
+              <div key={idx} className="p-3 bg-[rgb(var(--bg-base))] rounded-xl border border-[rgb(var(--border-default))]">
+                <p className="text-xs font-bold text-[rgb(var(--text-primary))] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--color-primary))]" />
+                  {item.q}
+                </p>
+                <p className="text-xs text-[rgb(var(--text-secondary))] mt-1.5 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Browse Categories Grid ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold text-[rgb(var(--text-primary))]">Browse by category</h2>
-            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">Pick a topic to explore verified FAQs</p>
+            <h2 className="text-xl font-bold font-display text-[rgb(var(--text-primary))]">Browse Categories</h2>
+            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">Explore discussion boards and FAQs by category</p>
           </div>
-          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/40 px-3 py-1 rounded-full">
-            {CATEGORIES.length} categories
-          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 stagger-children">
-          {CATEGORIES.map((cat) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {categories.map((cat) => {
             const hasFaqs = (categoryFaqs[cat.name] || []).length > 0;
             return (
               <button
                 key={cat.name}
-                onClick={() => navigate(`/faqs/${encodeURIComponent(cat.name)}`)}
+                onClick={() => navigate(`/discussions?category=${encodeURIComponent(cat.name)}`)}
                 className="group text-left bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4 card-hover relative overflow-hidden"
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[rgb(var(--bg-hover))] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
-                    {cat.icon}
+                    {cat.icon || "📁"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[rgb(var(--text-primary))] truncate">{cat.name}</p>
-                    <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5 line-clamp-1">{cat.desc}</p>
-                    {/* High-contrast pill fix */}
+                    <p className="text-sm font-semibold font-display text-[rgb(var(--text-primary))] truncate">{cat.name}</p>
+                    <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5 line-clamp-1">{cat.description || "Explore FAQs and discussions"}</p>
                     {hasFaqs && (
-                      <span className="inline-flex items-center mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-200 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100">
+                      <span className="inline-flex items-center mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]">
                         {categoryFaqs[cat.name].length} FAQs
                       </span>
                     )}
@@ -457,26 +409,171 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Can't Find Answer CTA ────────────────────────────── */}
-      <CantFindCta />
-
-      {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-[rgb(var(--border-default))] bg-[rgb(var(--bg-surface))]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black">
-                FAQ
-              </div>
-              <span className="text-sm font-bold text-[rgb(var(--text-primary))]">HelpDesk</span>
-              <span className="text-xs text-[rgb(var(--text-tertiary))]">· Internship FAQ System</span>
+      {/* ── Statistics Section ── */}
+      <section className="bg-[rgb(var(--bg-surface))] border-y border-[rgb(var(--border-default))] py-12 my-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div>
+              <p className="text-3xl font-black text-[rgb(var(--color-primary))] font-display">120+</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))] font-semibold mt-1">Verified FAQs</p>
             </div>
-            <p className="text-xs text-[rgb(var(--text-tertiary))]">
-              © 2025 HelpDesk · Built for the intern community
+            <div>
+              <p className="text-3xl font-black text-cyan-600 font-display">{categories.length}</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))] font-semibold mt-1">Predefined Modules</p>
+            </div>
+            <div>
+              <p className="text-3xl font-black text-teal-600 font-display">500+</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))] font-semibold mt-1">Discussion Posts</p>
+            </div>
+            <div>
+              <p className="text-3xl font-black text-emerald-600 font-display">100%</p>
+              <p className="text-xs text-[rgb(var(--text-secondary))] font-semibold mt-1">Admin Vetted</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer & Contact Form ── */}
+      <footer className="bg-[rgb(var(--bg-surface))] border-t border-[rgb(var(--border-default))] mt-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Copyright/Info */}
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[rgb(var(--color-primary))] to-[rgb(var(--color-primary-hover))] flex items-center justify-center text-white font-black text-sm">
+                  🏢
+                </div>
+                <span className="text-base font-bold font-display text-[rgb(var(--text-primary))]">Vicharanashala HelpDesk</span>
+              </div>
+              <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed max-w-sm">
+                A unified support desk system mapping standard internship FAQs for IIT Ropar interns. Connect with peers, search documentation, and log queries effortlessly.
+              </p>
+            </div>
+            <p className="text-xs text-[rgb(var(--text-tertiary))] mt-8">
+              © 2026 Vicharanashala IIT Ropar. All rights reserved.
             </p>
+          </div>
+
+          {/* Contact Inquiry Form */}
+          <div className="bg-[rgb(var(--bg-base))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm">
+            <h4 className="text-sm font-bold font-display text-[rgb(var(--text-primary))] mb-1">Support Inquiry Form</h4>
+            <p className="text-[11px] text-[rgb(var(--text-secondary))] mb-4">Submit a private support question directly to the admins.</p>
+            <form onSubmit={handleInquirySubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  required
+                  placeholder="Your Name"
+                  value={inquiry.name}
+                  onChange={(e) => setInquiry((prev) => ({ ...prev, name: e.target.value }))}
+                  className="input-base text-xs py-2 px-3"
+                />
+                <input
+                  type="email"
+                  required
+                  placeholder="Your Email"
+                  value={inquiry.email}
+                  onChange={(e) => setInquiry((prev) => ({ ...prev, email: e.target.value }))}
+                  className="input-base text-xs py-2 px-3"
+                />
+              </div>
+              <textarea
+                required
+                rows={3}
+                placeholder="Write your support question..."
+                value={inquiry.message}
+                onChange={(e) => setInquiry((prev) => ({ ...prev, message: e.target.value }))}
+                className="input-base text-xs py-2 px-3 resize-none"
+              />
+              <button
+                type="submit"
+                disabled={submittingInquiry}
+                className="w-full py-2 bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display rounded-xl hover:bg-[rgb(var(--color-primary-hover))] transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {submittingInquiry ? "Submitting..." : "Submit Inquiry"}
+              </button>
+            </form>
           </div>
         </div>
       </footer>
+
+      {/* ── Floating AI Support Chatbot Bubble & Drawer ── */}
+      <div className="fixed bottom-5 right-5 z-50">
+        {/* Bubble */}
+        <button
+          onClick={() => setChatOpen(!chatOpen)}
+          className="w-12 h-12 rounded-full bg-[rgb(var(--color-primary))] text-white flex items-center justify-center shadow-lg hover:scale-105 transition-all focus:outline-none"
+          title="AI Assistant Chatbot"
+        >
+          {chatOpen ? <X size={20} /> : <MessageSquare size={20} />}
+        </button>
+
+        {/* Drawer */}
+        {chatOpen && (
+          <div className="absolute bottom-14 right-0 w-80 sm:w-96 h-96 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-strong))] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="p-4 bg-[rgb(var(--color-primary))] text-white flex items-center gap-2">
+              <span className="text-base">🤖</span>
+              <div>
+                <h4 className="text-xs font-bold font-display">IIT Ropar AI Assistant</h4>
+                <p className="text-[10px] text-cyan-200">Online · Ask me anything</p>
+              </div>
+            </div>
+
+            {/* Messages box */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[rgb(var(--bg-base))]">
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  <div className={`p-2.5 rounded-2xl max-w-[85%] text-xs leading-relaxed ${
+                    msg.role === "user" ? "bg-[rgb(var(--color-primary))] text-white" : "bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] text-[rgb(var(--text-primary))]"
+                  }`}>
+                    {msg.content}
+                    {msg.links && msg.links.length > 0 && (
+                      <div className="mt-2 space-y-1 border-t border-[rgb(var(--border-default))] pt-1.5">
+                        {msg.links.map((link, lIdx) => (
+                          <Link
+                            key={lIdx}
+                            to={link.path}
+                            className="block text-[10px] text-cyan-600 font-semibold hover:underline"
+                          >
+                            🔗 {link.title}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex items-center gap-1 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] p-2 px-3 rounded-2xl w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
+            </div>
+
+            {/* Input area */}
+            <form onSubmit={handleChatSubmit} className="p-3 border-t border-[rgb(var(--border-strong))] bg-[rgb(var(--bg-surface))] flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask something (e.g. NOC signed...)"
+                className="flex-1 px-3 py-1.5 text-xs bg-[rgb(var(--bg-base))] border border-[rgb(var(--border-default))] rounded-xl outline-none focus:border-[rgb(var(--color-primary))] text-[rgb(var(--text-primary))]"
+              />
+              <button
+                type="submit"
+                className="w-8 h-8 rounded-xl bg-[rgb(var(--color-primary))] text-white flex items-center justify-center hover:bg-[rgb(var(--color-primary-hover))] transition-colors shrink-0"
+              >
+                <Send size={12} />
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
+      <ToastContainer />
     </div>
   );
 }

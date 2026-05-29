@@ -7,13 +7,21 @@ const faqRoutes = require("./routes/faqRoutes");
 const discussionRoutes = require("./routes/discussionRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 
-dotenv.config();
+const path = require("path");
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: (origin, callback) => {
+    if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -28,6 +36,7 @@ app.use("/faqs", faqRoutes);
 app.use("/discussions", discussionRoutes);
 app.use("/admin", adminRoutes);
 app.use("/announcements", announcementRoutes);
+app.use("/categories", categoryRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });

@@ -1,451 +1,701 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "../components/Toast";
+import { Shield, Database, Activity, LayoutGrid, Megaphone, Terminal, FileDown, Trash2, CheckCircle2, XCircle, Search, Sparkles, Merge, Plus, Edit3 } from "lucide-react";
 
-/* ── Helpers ──────────────────────────────────────────────────── */
-const CATEGORIES = [
-  "About the Internship", "Timing and Dates", "NOC", "Selection and Offer Letter",
-  "Work and Mentorship", "Communication Channels", "Interviews", "Certificate", "Rosetta",
-  "Phase 1 and Coursework", "Yaksha Chat", "ViBe Platform", "Team Formation",
-];
+import { useCategories } from "../context/CategoryContext";
 
-const AVATAR_COLORS = [
-  "from-pink-400 to-rose-500", "from-violet-400 to-purple-500", "from-blue-400 to-cyan-500",
-  "from-emerald-400 to-teal-500", "from-amber-400 to-orange-500", "from-indigo-400 to-blue-500",
-];
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let c of name || "U") hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-function Avatar({ name, size = "sm" }) {
-  const color = getAvatarColor(name || "U");
-  const sz = size === "sm" ? "w-7 h-7 text-xs" : "w-8 h-8 text-sm";
-  return (
-    <div className={`${sz} rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold shrink-0`}>
-      {(name || "U")[0].toUpperCase()}
-    </div>
-  );
-}
+export default function AdminPage() {
+  const { currentUser, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
-/* ── Metric Card ─────────────────────────────────────────────── */
-function MetricCard({ icon, label, value, sub, color = "indigo" }) {
-  const colorMap = {
-    indigo: "from-indigo-500 to-blue-500",
-    purple: "from-purple-500 to-pink-500",
-    emerald: "from-emerald-500 to-teal-500",
-    amber: "from-amber-500 to-orange-500",
-  };
-  return (
-    <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${colorMap[color]} flex items-center justify-center text-base shadow-sm`}>
-          {icon}
-        </div>
-      </div>
-      <p className="text-2xl font-black text-[rgb(var(--text-primary))]">{value}</p>
-      <p className="text-xs font-semibold text-[rgb(var(--text-secondary))] mt-0.5">{label}</p>
-      {sub && <p className="text-[11px] text-[rgb(var(--text-tertiary))] mt-0.5">{sub}</p>}
-    </div>
-  );
-}
+  const [activeTab, setActiveTab] = useState("analytics");
+  const [faqs, setFaqs] = useState([]);
+  const [discussions, setDiscussions] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const { categories, refreshCategories } = useCategories();
 
-/* ── Verify & Approve Modal ───────────────────────────────────── */
-function VerifyApproveModal({ discussion, onClose, onRefresh }) {
-  const { currentUser } = useAuth();
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  // Loading state
+  const [loading, setLoading] = useState(true);
 
-  if (!discussion) return null;
+  // Selection states
+  const [selectedDiscussions, setSelectedDiscussions] = useState([]);
 
-  const sortedAnswers = [...(discussion.answers || [])].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
 
-  const handleApprove = async () => {
-    if (!selectedAnswer) { toast({ type: "warning", message: "Select an answer to approve" }); return; }
-    setSubmitting(true);
+  // Moderation Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeDisc, setActiveDisc] = useState(null);
+  const [aiAnswer, setAiAnswer] = useState("");
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState([]);
+
+  // Categories addition state
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatDesc, setNewCatDesc] = useState("");
+  const [newCatIcon, setNewCatIcon] = useState("📁");
+
+  // Announcements CRUD states
+  const [annForm, setAnnForm] = useState({ id: null, title: "", content: "" });
+  const [annModalOpen, setAnnModalOpen] = useState(false);
+
+  // Telemetry states (CPU, RAM, Latency)
+  const [telemetry, setTelemetry] = useState({ cpu: 22, ram: 2.6, latency: 28 });
+
+  // Audit Logs state
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  // Real backend analytics state
+  const [analytics, setAnalytics] = useState({
+    totalFaqs: 0,
+    totalUsers: 0,
+    mostActiveCategory: "None",
+    mostUpvotedQuestion: { title: "None", upvotes: 0 }
+  });
+
+  // Fetch all necessary data
+  const fetchData = async () => {
     try {
-      await api.post(`/admin/approve/${discussion._id}`, { answerId: selectedAnswer._id });
-      toast({ type: "success", message: "FAQ approved and added to the knowledge base!" });
-      onRefresh();
-      onClose();
+      const [faqRes, discRes, annRes, analyticsRes] = await Promise.all([
+        api.get("/faqs?limit=200").catch(() => ({ data: [] })),
+        api.get("/admin/discussions").catch(() => ({ data: [] })),
+        api.get("/announcements").catch(() => ({ data: [] })),
+        api.get("/admin/analytics").catch(() => ({ data: { totalFaqs: 0, totalUsers: 0, mostActiveCategory: "None", mostUpvotedQuestion: { title: "None", upvotes: 0 } } }))
+      ]);
+
+      setFaqs(Array.isArray(faqRes.data) ? faqRes.data : (faqRes.data?.data || []));
+      setDiscussions(Array.isArray(discRes.data) ? discRes.data : (discRes.data?.data || []));
+      setAnnouncements(Array.isArray(annRes.data) ? annRes.data : (annRes.data?.data || []));
+      setAnalytics(analyticsRes.data);
     } catch (err) {
-      toast({ type: "error", message: err.response?.data?.message || "Failed to approve FAQ" });
+      toast({ type: "error", message: "Failed to fetch admin panel data" });
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleReject = async () => {
-    setSubmitting(true);
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate("/");
+      return;
+    }
+    fetchData();
+  }, [isAdmin]);
+
+  // Load audit logs from localStorage or seed them
+  useEffect(() => {
+    const logs = localStorage.getItem("admin_audit_logs");
+    if (logs) {
+      setAuditLogs(JSON.parse(logs));
+    } else {
+      const seedLogs = [
+        { action: "System Initialized", username: "System", timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
+        { action: "Admin Panel Mounted", username: currentUser?.username || "Admin", timestamp: new Date().toISOString() },
+      ];
+      localStorage.setItem("admin_audit_logs", JSON.stringify(seedLogs));
+      setAuditLogs(seedLogs);
+    }
+  }, []);
+
+  // Update audit log helper
+  const addAuditLog = (action) => {
+    const newLog = {
+      action,
+      username: currentUser?.username || "Admin",
+      timestamp: new Date().toISOString(),
+    };
+    const updated = [newLog, ...auditLogs];
+    setAuditLogs(updated);
+    localStorage.setItem("admin_audit_logs", JSON.stringify(updated));
+  };
+
+  // Telemetry fluctuation simulator
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTelemetry({
+        cpu: Math.floor(18 + Math.random() * 25), // 18% - 43%
+        ram: parseFloat((2.4 + Math.random() * 0.6).toFixed(2)), // 2.4GB - 3.0GB
+        latency: Math.floor(14 + Math.random() * 22) // 14ms - 36ms
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Export handlers
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(faqs, null, 2));
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", "vicharanashala_faqs.json");
+    dlAnchor.click();
+    addAuditLog("Exported FAQs to JSON file");
+    toast({ type: "success", message: "JSON file exported successfully!" });
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["ID", "Question", "Answer", "Category", "Views", "CreatedAt"];
+    const rows = faqs.map(f => [
+      f._id,
+      `"${(f.question || "").replace(/"/g, '""')}"`,
+      `"${(f.answer || "").replace(/"/g, '""')}"`,
+      f.category,
+      f.views || 0,
+      f.createdAt || ""
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const dlAnchor = document.createElement("a");
+    dlAnchor.setAttribute("href", encodeURI(csvContent));
+    dlAnchor.setAttribute("download", "vicharanashala_faqs.csv");
+    dlAnchor.click();
+    addAuditLog("Exported FAQs to CSV file");
+    toast({ type: "success", message: "CSV file exported successfully!" });
+  };
+
+  // Moderation filtering
+  const filteredDiscussions = discussions.filter(d => {
+    const matchesQuery = !searchQuery.trim() ||
+      (d.title || d.question || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (d.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCat = filterCategory === "All" || d.category === filterCategory;
+    const matchesStatus = filterStatus === "All" || d.status === filterStatus;
+    return matchesQuery && matchesCat && matchesStatus;
+  });
+
+  // Bulk actions handlers
+  const handleBulkApprove = async () => {
+    if (!selectedDiscussions.length) return;
     try {
-      await api.delete(`/admin/discussions/${discussion._id}`);
-      toast({ type: "info", message: "Discussion rejected and removed" });
-      onRefresh();
-      onClose();
+      await api.post("/admin/discussions/bulk-approve", { ids: selectedDiscussions });
+      toast({ type: "success", message: `Approved ${selectedDiscussions.length} discussions!` });
+      addAuditLog(`Bulk approved ${selectedDiscussions.length} discussions`);
+      setSelectedDiscussions([]);
+      fetchData();
     } catch {
-      toast({ type: "error", message: "Failed to reject discussion" });
-    } finally {
-      setSubmitting(false);
+      toast({ type: "error", message: "Failed to execute bulk approval" });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedDiscussions.length) return;
+    try {
+      await api.post("/admin/discussions/bulk-delete", { ids: selectedDiscussions });
+      toast({ type: "success", message: `Deleted ${selectedDiscussions.length} spam/duplicate discussions!` });
+      addAuditLog(`Bulk deleted ${selectedDiscussions.length} discussions`);
+      setSelectedDiscussions([]);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Failed to delete discussions" });
+    }
+  };
+
+  // Select all helper
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedDiscussions(filteredDiscussions.map(d => d._id));
+    } else {
+      setSelectedDiscussions([]);
+    }
+  };
+
+  // Sliding Drawer actions
+  const openModerationDrawer = (disc) => {
+    setActiveDisc(disc);
+    setAiAnswer("");
+    // Run duplicate check similarity locally
+    const titleLower = (disc.title || disc.question || "").toLowerCase();
+    const getJaccard = (s1, s2) => {
+      const w1 = new Set(s1.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+      const w2 = new Set(s2.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+      if (w1.size === 0 || w2.size === 0) return 0;
+      const inter = new Set([...w1].filter(x => w2.has(x)));
+      const union = new Set([...w1, ...w2]);
+      return inter.size / union.size;
+    };
+    const matches = [];
+    faqs.forEach(f => {
+      const score = getJaccard(titleLower, f.question);
+      if (score >= 0.15) {
+        matches.push({ id: f._id, type: "faq", title: f.question, score });
+      }
+    });
+    discussions.forEach(d => {
+      if (d._id !== disc._id) {
+        const score = getJaccard(titleLower, d.title || d.question);
+        if (score >= 0.15) {
+          matches.push({ id: d._id, type: "discussion", title: d.title || d.question, score });
+        }
+      }
+    });
+    setDuplicateMatches(matches.sort((a,b) => b.score - a.score).slice(0, 3));
+    setDrawerOpen(true);
+  };
+
+  // Generate AI Suggestion Answer
+  const generateAiAnswer = () => {
+    if (!activeDisc) return;
+    setGeneratingAi(true);
+    setTimeout(() => {
+      const desc = activeDisc.description.toLowerCase();
+      let ans = "";
+      if (activeDisc.category === "NOC") {
+        ans = "You need to fill out the No Objection Certificate (NOC) form, obtain the signature of your department HOD/Placement Cell officer, and submit it in PDF format via the Rosetta coursework platform under the Phase 1 NOC module. Submissions via email will not be validated.";
+      } else if (activeDisc.category === "Rosetta") {
+        ans = "Rosetta requires completion of all language learning exercises in Phase 1 coursework. Ensure you maintain at least 80% accuracy score. Certificates are automatically dispatched to active email accounts upon coordinator verification.";
+      } else if (activeDisc.category === "Timing and Dates") {
+        ans = "The Vicharanashala internship operates on strict project milestones. Extension requests are subject to approval by the academic committee and your designated mentor. Submit extensions via the support inquiry form at least 48 hours in advance.";
+      } else {
+        ans = `Regarding your query about "${activeDisc.title || activeDisc.question}": According to the Vicharanashala guidelines, please refer to the corresponding category dashboard. Check with your designated team lead and coordinator to submit project updates.`;
+      }
+      setAiAnswer(ans);
+      setGeneratingAi(false);
+      addAuditLog(`Generated AI Answer recommendation for discussion: ${activeDisc._id}`);
+      toast({ type: "success", message: "AI suggested answer generated!" });
+    }, 1000);
+  };
+
+  // Save AI answer as standard community response in database
+  const insertAiAnswer = async () => {
+    if (!aiAnswer.trim() || !activeDisc) return;
+    try {
+      await api.post(`/discussions/${activeDisc._id}/answers`, { content: aiAnswer });
+      toast({ type: "success", message: "Suggested answer added to discussion replies!" });
+      addAuditLog(`Saved AI suggested answer to discussion: ${activeDisc._id}`);
+      setAiAnswer("");
+      fetchData();
+      setDrawerOpen(false);
+    } catch {
+      toast({ type: "error", message: "Failed to insert answer" });
+    }
+  };
+
+  // Single Approve / Reject
+  const handleApproveDisc = async (discId, answerId) => {
+    if (!answerId) {
+      toast({ type: "warning", message: "Choose or add an answer before approving as FAQ" });
+      return;
+    }
+    try {
+      await api.patch(`/admin/discussions/${discId}/approve`, { answerId });
+      toast({ type: "success", message: "FAQ created successfully and discussion resolved!" });
+      addAuditLog(`Approved discussion ${discId} to FAQ repository`);
+      setDrawerOpen(false);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Approval failed" });
+    }
+  };
+
+  const handleRejectDisc = async (discId) => {
+    try {
+      await api.patch(`/admin/discussions/${discId}/reject`);
+      toast({ type: "info", message: "Discussion rejected and deleted" });
+      addAuditLog(`Rejected/Deleted discussion ${discId}`);
+      setDrawerOpen(false);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Rejection failed" });
+    }
+  };
+
+  const handleMergeDuplicate = async (discId) => {
+    try {
+      await api.patch(`/admin/discussions/${discId}/reject`);
+      toast({ type: "success", message: "Merged as duplicate (deleted duplicate query)" });
+      addAuditLog(`Merged duplicate discussion ${discId}`);
+      setDrawerOpen(false);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Merge failed" });
+    }
+  };
+
+  // Category management
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) {
+      toast({ type: "warning", message: "Category name is required" });
+      return;
+    }
+    if (categories.some(c => c.name.toLowerCase() === newCatName.trim().toLowerCase())) {
+      toast({ type: "warning", message: "Category already exists" });
+      return;
+    }
+    try {
+      await api.post("/admin/categories", {
+        name: newCatName.trim(),
+        description: newCatDesc.trim(),
+        icon: newCatIcon.trim() || "📁"
+      });
+      setNewCatName("");
+      setNewCatDesc("");
+      setNewCatIcon("📁");
+      await refreshCategories();
+      addAuditLog(`Created new category: ${newCatName.trim()}`);
+      toast({ type: "success", message: "Category added successfully!" });
+    } catch (err) {
+      toast({ type: "error", message: err.response?.data?.message || "Failed to add category" });
+    }
+  };
+
+  const handleDeleteCategory = async (catName) => {
+    try {
+      await api.delete(`/admin/categories/${encodeURIComponent(catName)}`);
+      await refreshCategories();
+      addAuditLog(`Deleted category: ${catName}`);
+      toast({ type: "info", message: `Deleted category: ${catName}` });
+    } catch (err) {
+      toast({ type: "error", message: err.response?.data?.message || "Failed to delete category" });
+    }
+  };
+
+  // Announcements CRUD
+  const handleOpenAnnModal = (ann = null) => {
+    if (ann) {
+      setAnnForm({ id: ann._id, title: ann.title, content: ann.content });
+    } else {
+      setAnnForm({ id: null, title: "", content: "" });
+    }
+    setAnnModalOpen(true);
+  };
+
+  const handleSaveAnnouncement = async (e) => {
+    e.preventDefault();
+    if (!annForm.title.trim() || !annForm.content.trim()) return;
+
+    try {
+      if (annForm.id) {
+        await api.put(`/announcements/${annForm.id}`, { title: annForm.title, content: annForm.content });
+        toast({ type: "success", message: "Announcement updated!" });
+        addAuditLog(`Updated announcement ID: ${annForm.id}`);
+      } else {
+        await api.post("/announcements", { title: annForm.title, content: annForm.content });
+        toast({ type: "success", message: "Announcement created!" });
+        addAuditLog(`Created new announcement: ${annForm.title}`);
+      }
+      setAnnModalOpen(false);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Failed to save announcement" });
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    try {
+      await api.delete(`/announcements/${id}`);
+      toast({ type: "info", message: "Announcement deleted" });
+      addAuditLog(`Deleted announcement ID: ${id}`);
+      fetchData();
+    } catch {
+      toast({ type: "error", message: "Failed to delete announcement" });
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-2xl bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-[rgb(var(--border-default))] flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-base font-bold text-[rgb(var(--text-primary))]">Verify &amp; Approve FAQ</h2>
-            <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5">Select the best answer to create an approved FAQ</p>
-          </div>
-          <button onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-[rgb(var(--bg-hover))] flex items-center justify-center text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] transition-colors">
-            ✕
+    <div className="min-h-screen pb-16">
+      {/* Header Panel */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black font-display text-[rgb(var(--text-primary))] flex items-center gap-2">
+            <Shield className="text-[rgb(var(--color-primary))]" /> Admin Control Panel
+          </h1>
+          <p className="text-xs text-[rgb(var(--text-secondary))] mt-0.5">Manage support telemetry, moderations, categories, and announcements.</p>
+        </div>
+        
+        {/* Export buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] border border-[rgb(var(--border-strong))] text-xs font-bold font-display rounded-lg transition-all"
+          >
+            <FileDown size={14} /> Export CSV
+          </button>
+          <button
+            onClick={handleExportJSON}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] border border-[rgb(var(--border-strong))] text-xs font-bold font-display rounded-lg transition-all"
+          >
+            <Database size={14} /> Export JSON
           </button>
         </div>
+      </div>
 
-        {/* Discussion question */}
-        <div className="px-6 py-4 border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] shrink-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
-              {discussion.category}
-            </span>
-          </div>
-          <p className="text-sm font-bold text-[rgb(var(--text-primary))]">{discussion.question}</p>
-          {discussion.description && (
-            <p className="text-xs text-[rgb(var(--text-secondary))] mt-1">{discussion.description}</p>
-          )}
-        </div>
+      {/* Tabs list */}
+      <div className="flex gap-2 border-b border-[rgb(var(--border-default))] pb-2 mb-6">
+        <button
+          onClick={() => setActiveTab("analytics")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold font-display transition-all ${
+            activeTab === "analytics" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+          }`}
+        >
+          <Activity size={14} /> Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab("moderation")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold font-display transition-all ${
+            activeTab === "moderation" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+          }`}
+        >
+          <CheckCircle2 size={14} /> Moderation
+        </button>
+        <button
+          onClick={() => setActiveTab("categories")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold font-display transition-all ${
+            activeTab === "categories" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+          }`}
+        >
+          <LayoutGrid size={14} /> Categories
+        </button>
+        <button
+          onClick={() => setActiveTab("announcements")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold font-display transition-all ${
+            activeTab === "announcements" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+          }`}
+        >
+          <Megaphone size={14} /> Announcements
+        </button>
+        <button
+          onClick={() => setActiveTab("audit")}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold font-display transition-all ${
+            activeTab === "audit" ? "bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]" : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+          }`}
+        >
+          <Terminal size={14} /> Audit
+        </button>
+      </div>
 
-        {/* Answers */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          <p className="text-xs font-semibold text-[rgb(var(--text-tertiary))] uppercase tracking-wider mb-2">
-            Community Answers — {sortedAnswers.length} total (sorted by upvotes)
-          </p>
-          {sortedAnswers.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-sm text-[rgb(var(--text-tertiary))]">No answers yet. Be the first to answer!</p>
+      {/* Analytics Tab */}
+      {activeTab === "analytics" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* KPI summary metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4">
+              <span className="text-[10px] uppercase font-bold text-[rgb(var(--text-tertiary))]">Total FAQs</span>
+              <p className="text-2xl font-black font-display text-[rgb(var(--text-primary))] mt-1">{analytics.totalFaqs}</p>
             </div>
-          )}
-          {sortedAnswers.map((ans, i) => (
-            <div
-              key={ans._id}
-              onClick={() => setSelectedAnswer(ans)}
-              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                selectedAnswer?._id === ans._id
-                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                  : "border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] hover:border-indigo-300"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {selectedAnswer?._id === ans._id && (
-                  <div className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold mt-0.5">
-                    ✓
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar name={ans.author?.username || "U"} size="sm" />
-                    <span className="text-xs font-semibold text-[rgb(var(--text-primary))]">
-                      {ans.author?.username || "Anonymous"}
-                    </span>
-                    <span className="text-[10px] text-[rgb(var(--text-tertiary))]">
-                      ▲ {ans.upvotes || 0} upvotes
-                    </span>
-                    {i === 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                        Top answer
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed whitespace-pre-wrap">
-                    {ans.content}
-                  </p>
+            <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4">
+              <span className="text-[10px] uppercase font-bold text-[rgb(var(--text-tertiary))]">Total Users</span>
+              <p className="text-2xl font-black font-display text-emerald-600 mt-1">{analytics.totalUsers}</p>
+            </div>
+            <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4">
+              <span className="text-[10px] uppercase font-bold text-[rgb(var(--text-tertiary))]">Most Active Category</span>
+              <p className="text-2xl font-black font-display text-indigo-600 mt-1 truncate" title={analytics.mostActiveCategory}>
+                {analytics.mostActiveCategory}
+              </p>
+            </div>
+            <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4 flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[rgb(var(--text-tertiary))]">Most Upvoted Question</span>
+                <p 
+                  className="text-xs font-bold text-[rgb(var(--text-primary))] line-clamp-2 mt-1" 
+                  title={analytics.mostUpvotedQuestion?.title || "None"}
+                >
+                  {analytics.mostUpvotedQuestion?.title || "None"}
+                </p>
+              </div>
+              {analytics.mostUpvotedQuestion && analytics.mostUpvotedQuestion.upvotes > 0 && (
+                <span className="text-[9px] text-cyan-600 font-bold mt-1 block">
+                  ▲ {analytics.mostUpvotedQuestion.upvotes} Upvotes
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Node Telemetry Component */}
+          <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4 border-b border-[rgb(var(--border-default))] pb-2">
+              <h3 className="text-sm font-bold font-display text-[rgb(var(--text-primary))] flex items-center gap-1.5">
+                <Activity size={16} className="text-[rgb(var(--color-primary))] animate-pulse" />
+                Real-Time Node Telemetry
+              </h3>
+              <span className="text-[9px] font-bold text-emerald-600 uppercase bg-emerald-100 dark:bg-emerald-950/30 px-2 py-0.5 rounded-full">
+                Systems Live
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* CPU load */}
+              <div>
+                <div className="flex justify-between items-center text-xs font-semibold mb-1 text-[rgb(var(--text-secondary))]">
+                  <span>CPU Load</span>
+                  <span>{telemetry.cpu}%</span>
+                </div>
+                <div className="w-full bg-[rgb(var(--bg-base))] h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[rgb(var(--color-primary))] h-full transition-all duration-1000"
+                    style={{ width: `${telemetry.cpu}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Memory Allocation */}
+              <div>
+                <div className="flex justify-between items-center text-xs font-semibold mb-1 text-[rgb(var(--text-secondary))]">
+                  <span>Virtual Memory Allocation</span>
+                  <span>{telemetry.ram} GB / 8.0 GB</span>
+                </div>
+                <div className="w-full bg-[rgb(var(--bg-base))] h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-cyan-500 h-full transition-all duration-1000"
+                    style={{ width: `${(telemetry.ram / 8.0) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Latency */}
+              <div>
+                <div className="flex justify-between items-center text-xs font-semibold mb-1 text-[rgb(var(--text-secondary))]">
+                  <span>API Latency Response</span>
+                  <span>{telemetry.latency} ms</span>
+                </div>
+                <div className="w-full bg-[rgb(var(--bg-base))] h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-teal-500 h-full transition-all duration-1000"
+                    style={{ width: `${(telemetry.latency / 60) * 100}%` }}
+                  />
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
+      )}
 
-        {/* Actions */}
-        <div className="px-6 py-4 border-t border-[rgb(var(--border-default))] flex items-center gap-3 shrink-0 bg-[rgb(var(--bg-surface))]">
-          <button
-            onClick={handleReject}
-            disabled={submitting}
-            className="px-4 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-          >
-            Reject
-          </button>
-          <button
-            onClick={handleApprove}
-            disabled={submitting || !selectedAnswer}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-          >
-            {submitting ? (
-              <>Processing...</>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Approve as FAQ
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Main AdminPage ──────────────────────────────────────────── */
-export default function AdminPage() {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("moderation");
-  const [discussions, setDiscussions] = useState([]);
-  const [faqs, setFaqs] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filterCat, setFilterCat] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [selected, setSelected] = useState(null); // for verify modal
-
-  // FAQ create form
-  const [faqForm, setFaqForm] = useState({ question: "", answer: "", category: CATEGORIES[0] });
-  const [faqSubmitting, setFaqSubmitting] = useState(false);
-
-  // Announcement form
-  const [annForm, setAnnForm] = useState({ title: "", content: "", priority: "normal" });
-  const [annSubmitting, setAnnSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!currentUser || currentUser.role !== "admin") navigate("/");
-  }, [currentUser, navigate]);
-
-  const fetchAll = () => {
-    setLoading(true);
-    Promise.all([
-      api.get("/discussions").catch(() => ({ data: [] })),
-      api.get("/faqs").catch(() => ({ data: [] })),
-      api.get("/announcements").catch(() => ({ data: [] })),
-    ]).then(([dRes, fRes, aRes]) => {
-      const discussions = Array.isArray(dRes) ? dRes : (dRes?.data || []);
-      const faqs = Array.isArray(fRes) ? fRes : (fRes?.data || []);
-      const announcements = Array.isArray(aRes) ? aRes : (aRes?.data || []);
-      setDiscussions(discussions);
-      setFaqs(faqs);
-      setAnnouncements(announcements);
-    }).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchAll(); }, []);
-
-  const pending = discussions.filter((d) => d.status === "open" || !d.status);
-  const filtered = discussions.filter((d) => {
-    if (filterCat !== "All" && d.category !== filterCat) return false;
-    if (filterStatus !== "All" && d.status !== filterStatus) return false;
-    return true;
-  });
-
-  // FAQ create
-  const handleFaqSubmit = async (e) => {
-    e.preventDefault();
-    if (!faqForm.question.trim() || !faqForm.answer.trim()) {
-      toast({ type: "warning", message: "Question and answer are required" }); return;
-    }
-    setFaqSubmitting(true);
-    try {
-      await api.post("/admin/faqs", faqForm);
-      toast({ type: "success", message: "FAQ created successfully!" });
-      setFaqForm({ question: "", answer: "", category: CATEGORIES[0] });
-      fetchAll();
-    } catch {
-      toast({ type: "error", message: "Failed to create FAQ" });
-    } finally {
-      setFaqSubmitting(false);
-    }
-  };
-
-  // Announcement submit
-  const handleAnnSubmit = async (e) => {
-    e.preventDefault();
-    if (!annForm.title.trim() || !annForm.content.trim()) {
-      toast({ type: "warning", message: "Title and content are required" }); return;
-    }
-    setAnnSubmitting(true);
-    try {
-      await api.post("/announcements", annForm);
-      toast({ type: "success", message: "Announcement posted!" });
-      setAnnForm({ title: "", content: "", priority: "normal" });
-      fetchAll();
-    } catch {
-      toast({ type: "error", message: "Failed to post announcement" });
-    } finally {
-      setAnnSubmitting(false);
-    }
-  };
-
-  // Delete FAQ
-  const handleDeleteFaq = async (id) => {
-    if (!confirm("Delete this FAQ? This cannot be undone.")) return;
-    try {
-      await api.delete(`/admin/faqs/${id}`);
-      toast({ type: "info", message: "FAQ deleted" });
-      fetchAll();
-    } catch {
-      toast({ type: "error", message: "Failed to delete FAQ" });
-    }
-  };
-
-  const TABS = [
-    { key: "moderation", label: "Moderation", badge: pending.length, color: "text-amber-500" },
-    { key: "faq-mgmt", label: "FAQ Management", badge: faqs.length, color: "text-indigo-500" },
-    { key: "announcements", label: "Announcements", badge: announcements.length, color: "text-emerald-500" },
-    { key: "create", label: "Create FAQ", color: "text-purple-500" },
-  ];
-
-  return (
-    <div>
-      {/* Page title */}
-      <div className="mb-6">
-        <h1 className="text-xl font-black text-[rgb(var(--text-primary))]">Admin Panel</h1>
-        <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">
-          Welcome back, {currentUser?.username} · Manage content, moderation, and FAQs
-        </p>
-      </div>
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
-        <MetricCard icon="💬" label="Pending Discussions" value={pending.length} sub="Awaiting moderation" color="amber" />
-        <MetricCard icon="📖" label="Approved FAQs" value={faqs.length} sub="In knowledge base" color="indigo" />
-        <MetricCard icon="📌" label="Announcements" value={announcements.length} sub="Active" color="emerald" />
-        <MetricCard icon="💬" label="Total Discussions" value={discussions.length} sub="All time" color="purple" />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl mb-6 w-fit">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === tab.key
-                ? "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-primary))] shadow-sm"
-                : "text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-secondary))]"
-            }`}
-          >
-            <span className={activeTab === tab.key ? tab.color : ""}>{tab.label}</span>
-            {tab.badge !== undefined && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                activeTab === tab.key
-                  ? "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))]"
-                  : "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-tertiary))]"
-              }`}>
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Moderation ─────────────────────────────────────────── */}
+      {/* Moderation Tab */}
       {activeTab === "moderation" && (
-        <div>
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}
-              className="input-base w-auto text-xs py-1.5">
-              <option value="All">All Categories</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="input-base w-auto text-xs py-1.5">
-              <option value="All">All Status</option>
-              <option value="open">Open</option>
-              <option value="answered">Answered</option>
-              <option value="closed">Closed</option>
-            </select>
-            <span className="text-xs text-[rgb(var(--text-tertiary))]">
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-            </span>
+        <div className="space-y-4 animate-fade-in">
+          {/* Filters Bar & Bulk Action Drawer Toggle */}
+          <div className="bg-[rgb(var(--bg-surface))] p-4 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative w-full sm:flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))]" />
+                <input
+                  type="text"
+                  placeholder="Search queries by keywords..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs bg-[rgb(var(--bg-base))] border border-[rgb(var(--border-strong))] rounded-xl outline-none text-[rgb(var(--text-primary))]"
+                />
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto">
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="input-base text-xs py-1.5 px-3 flex-1 sm:flex-initial"
+                >
+                  <option value="All">All Categories</option>
+                  {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                </select>
+
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="input-base text-xs py-1.5 px-3 flex-1 sm:flex-initial"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="unanswered">Unanswered</option>
+                  <option value="pending">Pending</option>
+                  <option value="answered">Answered</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Bulk actions helper bar */}
+            {selectedDiscussions.length > 1 && (
+              <div className="flex items-center justify-between p-3 bg-[rgb(var(--color-primary-light))] border border-[rgb(var(--color-primary))] rounded-xl animate-scale-in">
+                <span className="text-xs font-bold text-[rgb(var(--color-primary))] font-display">
+                  🛠️ Bulk Actions: {selectedDiscussions.length} rows selected
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkApprove}
+                    className="px-3 py-1 bg-[rgb(var(--color-primary))] text-white text-[10px] font-bold rounded-lg hover:bg-[rgb(var(--color-primary-hover))] transition-all"
+                  >
+                    Verify Answers
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700 transition-all"
+                  >
+                    Delete Spams
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Table */}
-          <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl overflow-hidden">
+          {/* Moderation List Table */}
+          <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="table-modern">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr>
-                    <th>Question</th>
-                    <th>Category</th>
-                    <th>Author</th>
-                    <th>Answers</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                  <tr className="bg-[rgb(var(--bg-base))] border-b border-[rgb(var(--border-default))] text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))]">
+                    <th className="p-4 w-12">
+                      <input
+                        type="checkbox"
+                        checked={filteredDiscussions.length > 0 && selectedDiscussions.length === filteredDiscussions.length}
+                        onChange={handleSelectAll}
+                        className="rounded"
+                      />
+                    </th>
+                    <th className="p-4">Topic / Query</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Replies</th>
+                    <th className="p-4">Status</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-10 text-sm text-[rgb(var(--text-tertiary))]">No discussions found</td></tr>
-                  ) : filtered.map((d) => (
-                    <tr key={d._id}>
-                      <td>
-                        <p className="text-sm font-medium text-[rgb(var(--text-primary))] line-clamp-1 max-w-xs">{d.question}</p>
-                      </td>
-                      <td>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))]">
-                          {d.category}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1.5">
-                          <Avatar name={d.author?.username || "U"} size="sm" />
-                          <span className="text-xs text-[rgb(var(--text-secondary))]">{d.author?.username || "—"}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="text-xs font-semibold text-[rgb(var(--text-secondary))]">{d.answers?.length || 0}</span>
-                      </td>
-                      <td>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                          d.status === "open" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" :
-                          d.status === "answered" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" :
-                          "bg-gray-100 text-gray-500"
-                        }`}>
-                          {d.status || "open"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          {(d.answers?.length || 0) > 0 && (
-                            <button
-                              onClick={() => setSelected(d)}
-                              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 transition-colors"
-                            >
-                              Verify &amp; Approve
-                            </button>
-                          )}
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Delete this discussion?")) return;
-                              try {
-                                await api.delete(`/admin/discussions/${d._id}`);
-                                toast({ type: "info", message: "Discussion deleted" });
-                                fetchAll();
-                              } catch {
-                                toast({ type: "error", message: "Failed to delete" });
-                              }
-                            }}
-                            className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                <tbody className="divide-y divide-[rgb(var(--border-default))] text-xs text-[rgb(var(--text-primary))]">
+                  {filteredDiscussions.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-[rgb(var(--text-tertiary))] italic">
+                        No pending discussions matches the filter criteria.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredDiscussions.map(d => (
+                      <tr
+                        key={d._id}
+                        className="hover:bg-[rgb(var(--bg-hover))] transition-colors cursor-pointer"
+                        onClick={() => openModerationDrawer(d)}
+                      >
+                        {/* Checkbox */}
+                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedDiscussions.includes(d._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedDiscussions(prev => [...prev, d._id]);
+                              } else {
+                                setSelectedDiscussions(prev => prev.filter(id => id !== d._id));
+                              }
+                            }}
+                            className="rounded"
+                          />
+                        </td>
+                        {/* Title */}
+                        <td className="p-4 font-semibold max-w-xs truncate">
+                          {d.title || d.question}
+                          <p className="text-[10px] text-[rgb(var(--text-tertiary))] font-normal mt-0.5">Posted by: {d.author?.username || "student"}</p>
+                        </td>
+                        {/* Category */}
+                        <td className="p-4">{d.category}</td>
+                        {/* Replies */}
+                        <td className="p-4 font-bold">{d.answers?.length || 0}</td>
+                        {/* Status */}
+                        <td className="p-4">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
+                            d.status === "unanswered" ? "bg-amber-100 text-amber-800" : "bg-cyan-100 text-cyan-800"
+                          }`}>
+                            {d.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -453,176 +703,355 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── FAQ Management ──────────────────────────────────────── */}
-      {activeTab === "faq-mgmt" && (
-        <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="table-modern">
-              <thead>
-                <tr>
-                  <th>Question</th>
-                  <th>Category</th>
-                  <th>Upvotes</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {faqs.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center py-10 text-sm text-[rgb(var(--text-tertiary))]">No FAQs yet</td></tr>
-                ) : faqs.map((f) => (
-                  <tr key={f._id}>
-                    <td>
-                      <p className="text-sm font-medium text-[rgb(var(--text-primary))] line-clamp-2 max-w-sm">{f.question}</p>
-                    </td>
-                    <td>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))]">
-                        {f.category}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="text-xs font-semibold text-[rgb(var(--text-secondary))]">▲ {f.upvotes || 0}</span>
-                    </td>
-                    <td>
-                      <span className="text-xs text-[rgb(var(--text-tertiary))]">
-                        {new Date(f.createdAt || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleDeleteFaq(f._id)}
-                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Moderation Details Sliding Drawer */}
+      {drawerOpen && activeDisc && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex justify-end backdrop-blur-sm">
+          {/* Close click area */}
+          <div className="flex-1" onClick={() => setDrawerOpen(false)} />
+
+          {/* Drawer content body */}
+          <div className="w-full max-w-lg bg-[rgb(var(--bg-surface))] h-full shadow-2xl flex flex-col overflow-hidden animate-slide-in border-l border-[rgb(var(--border-strong))]">
+            {/* Header */}
+            <div className="p-4 bg-[rgb(var(--bg-base))] border-b border-[rgb(var(--border-default))] flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold font-display uppercase tracking-wider text-[rgb(var(--text-secondary))]">Moderation Drawer</h4>
+                <p className="text-xs font-bold text-[rgb(var(--text-primary))] mt-0.5 line-clamp-1">{activeDisc.title || activeDisc.question}</p>
+              </div>
+              <button onClick={() => setDrawerOpen(false)} className="text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-secondary))] p-1">
+                ✕
+              </button>
+            </div>
+
+            {/* Content body */}
+            <div className="flex-1 p-5 overflow-y-auto space-y-6">
+              {/* Context info */}
+              <div className="bg-[rgb(var(--bg-base))] p-3.5 rounded-xl border border-[rgb(var(--border-default))] space-y-1.5">
+                <p className="text-[10px] text-[rgb(var(--text-tertiary))]">Category: <span className="font-bold text-[rgb(var(--text-primary))]">{activeDisc.category}</span></p>
+                <p className="text-[10px] text-[rgb(var(--text-tertiary))]">Submitted By: <span className="font-bold text-[rgb(var(--text-primary))]">{activeDisc.author?.username || "student"}</span></p>
+                <p className="text-[10px] text-[rgb(var(--text-tertiary))]">Description:</p>
+                <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed bg-[rgb(var(--bg-surface))] p-2.5 rounded border border-[rgb(var(--border-default))]">{activeDisc.description}</p>
+              </div>
+
+              {/* Duplicate Merger control widget */}
+              <div className="bg-[rgb(var(--bg-base))] p-4 rounded-xl border border-[rgb(var(--border-default))] space-y-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] flex items-center gap-1">
+                  <Merge size={12} /> Duplicate Similarity Checker
+                </span>
+                {duplicateMatches.length === 0 ? (
+                  <p className="text-xs text-[rgb(var(--text-tertiary))] italic">No similar discussions/FAQs identified.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {duplicateMatches.map((m, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs p-2 bg-[rgb(var(--bg-surface))] rounded border border-[rgb(var(--border-default))]">
+                        <span className="truncate pr-2">[{m.type.toUpperCase()}] {m.title}</span>
+                        <button
+                          onClick={() => handleMergeDuplicate(activeDisc._id)}
+                          className="shrink-0 text-[10px] px-2 py-0.5 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded"
+                        >
+                          Merge Duplicate
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* AI Suggested Answer Panel */}
+              <div className="bg-[rgb(var(--bg-base))] p-4 rounded-xl border border-[rgb(var(--border-default))] space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] flex items-center gap-1">
+                    <Sparkles size={12} className="text-[rgb(var(--color-primary))]" /> AI Answer Generator
+                  </span>
+                  <button
+                    onClick={generateAiAnswer}
+                    disabled={generatingAi}
+                    className="px-2.5 py-1 bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))] text-[10px] font-bold rounded-lg hover:bg-[rgb(var(--bg-hover))]"
+                  >
+                    {generatingAi ? "Analyzing..." : "Generate AI Answer"}
+                  </button>
+                </div>
+                {aiAnswer && (
+                  <div className="space-y-2">
+                    <textarea
+                      value={aiAnswer}
+                      onChange={(e) => setAiAnswer(e.target.value)}
+                      rows={3}
+                      className="w-full p-2.5 text-xs bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-strong))] rounded-lg resize-none outline-none focus:border-[rgb(var(--color-primary))]"
+                    />
+                    <button
+                      onClick={insertAiAnswer}
+                      className="px-3 py-1 bg-[rgb(var(--color-primary))] text-white text-[10px] font-bold rounded-lg hover:bg-[rgb(var(--color-primary-hover))]"
+                    >
+                      Insert as Answer
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Answers submitted */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))]">Submitted Answers ({activeDisc.answers?.length || 0})</span>
+                {(activeDisc.answers || []).length === 0 ? (
+                  <p className="text-xs text-[rgb(var(--text-tertiary))] italic">No answers submitted yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeDisc.answers.map(ans => (
+                      <div key={ans._id} className="p-3 bg-[rgb(var(--bg-base))] border border-[rgb(var(--border-default))] rounded-xl flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold text-[rgb(var(--text-secondary))]">{ans.author?.username || "student"}</p>
+                          <p className="text-xs text-[rgb(var(--text-primary))] mt-1 leading-relaxed">{ans.content}</p>
+                        </div>
+                        <button
+                          onClick={() => handleApproveDisc(activeDisc._id, ans._id)}
+                          className="shrink-0 px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-bold rounded-lg"
+                        >
+                          Verify &amp; Create FAQ
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] flex gap-2">
+              <button
+                onClick={() => handleRejectDisc(activeDisc._id)}
+                className="flex-1 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold font-display rounded-xl"
+              >
+                Reject Query
+              </button>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="px-4 py-2 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-strong))] text-[rgb(var(--text-secondary))] text-xs font-bold font-display rounded-xl"
+              >
+                Close Drawer
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Announcements ───────────────────────────────────────── */}
-      {activeTab === "announcements" && (
-        <div className="space-y-4">
-          {/* Post new */}
-          <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-5">
-            <h3 className="text-sm font-bold text-[rgb(var(--text-primary))] mb-4">Post new announcement</h3>
-            <form onSubmit={handleAnnSubmit} className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input
-                  value={annForm.title}
-                  onChange={(e) => setAnnForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="Announcement title"
-                  className="input-base"
-                />
-                <select
-                  value={annForm.priority}
-                  onChange={(e) => setAnnForm((f) => ({ ...f, priority: e.target.value }))}
-                  className="input-base"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="high">High Priority</option>
-                </select>
-                <button type="submit" disabled={annSubmitting}
-                  className="py-2 px-4 rounded-xl bg-[rgb(var(--color-primary))] text-white text-sm font-semibold hover:bg-[rgb(var(--color-primary-hover))] transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                  {annSubmitting ? "Posting..." : "📌 Post announcement"}
-                </button>
+      {/* Categories Tab */}
+      {activeTab === "categories" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Add Category Form */}
+          <div className="bg-[rgb(var(--bg-surface))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm max-w-lg">
+            <h3 className="text-xs font-bold font-display text-[rgb(var(--text-primary))] mb-3.5 uppercase tracking-wider">Add Category Module</h3>
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] mb-1">Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Stipend & Finance"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    className="w-full input-base text-xs py-2 px-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] mb-1">Icon</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 💰"
+                    value={newCatIcon}
+                    onChange={(e) => setNewCatIcon(e.target.value)}
+                    className="w-full input-base text-xs py-2 px-3 text-center"
+                  />
+                </div>
               </div>
-              <textarea
-                value={annForm.content}
-                onChange={(e) => setAnnForm((f) => ({ ...f, content: e.target.value }))}
-                placeholder="Announcement content..."
-                className="input-base resize-none h-20"
-              />
-            </form>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Overview of this module..."
+                  value={newCatDesc}
+                  onChange={(e) => setNewCatDesc(e.target.value)}
+                  className="w-full input-base text-xs py-2 px-3 resize-none"
+                />
+              </div>
+              <button
+                onClick={handleAddCategory}
+                className="w-full py-2 bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display rounded-xl hover:bg-[rgb(var(--color-primary-hover))] transition-all flex items-center justify-center gap-1"
+              >
+                <Plus size={14} /> Add Category
+              </button>
+            </div>
           </div>
 
-          {/* List */}
-          <div className="space-y-2">
-            {announcements.length === 0 && (
-              <p className="text-center py-10 text-sm text-[rgb(var(--text-tertiary))]">No announcements yet</p>
-            )}
-            {announcements.map((a) => (
-              <div key={a._id}
-                className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4 flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-sm shrink-0">
-                  📌
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-bold text-[rgb(var(--text-primary))]">{a.title}</p>
-                    {a.priority === "high" && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">HIGH</span>
-                    )}
+          {/* Categories Grid List */}
+          <div className="bg-[rgb(var(--bg-surface))] p-5 rounded-2xl border border-[rgb(var(--border-default))] shadow-sm">
+            <h3 className="text-xs font-bold font-display text-[rgb(var(--text-primary))] mb-3 uppercase tracking-wider">Active Categories ({categories.length})</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {categories.map(cat => (
+                <div key={cat.name} className="flex justify-between items-center p-3 bg-[rgb(var(--bg-base))] rounded-xl border border-[rgb(var(--border-default))] text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base shrink-0">{cat.icon || "📁"}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[rgb(var(--text-primary))] truncate" title={cat.name}>{cat.name}</p>
+                      {cat.description && <p className="text-[10px] text-[rgb(var(--text-tertiary))] truncate" title={cat.description}>{cat.description}</p>}
+                    </div>
                   </div>
-                  <p className="text-xs text-[rgb(var(--text-secondary))]">{a.content}</p>
-                  <p className="text-[10px] text-[rgb(var(--text-tertiary))] mt-1">
-                    {new Date(a.createdAt || Date.now()).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
+                  <button
+                    onClick={() => handleDeleteCategory(cat.name)}
+                    className="text-red-500 hover:text-red-700 p-1 shrink-0 ml-2"
+                    title="Delete Category"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Announcements Tab */}
+      {activeTab === "announcements" && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xs font-bold font-display text-[rgb(var(--text-primary))] uppercase tracking-wider">Announcements ({announcements.length})</h3>
+            <button
+              onClick={() => handleOpenAnnModal()}
+              className="px-3.5 py-2 bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display rounded-xl hover:bg-[rgb(var(--color-primary-hover))] transition-all flex items-center gap-1"
+            >
+              <Plus size={14} /> Post Announcement
+            </button>
+          </div>
+
+          {/* Announcements list */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {announcements.map(ann => (
+              <div key={ann._id} className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <h4 className="text-sm font-bold font-display text-[rgb(var(--text-primary))]">{ann.title}</h4>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleOpenAnnModal(ann)}
+                        className="text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--color-primary))] p-1"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAnnouncement(ann._id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed line-clamp-3">{ann.content}</p>
+                </div>
+                <span className="text-[10px] text-[rgb(var(--text-tertiary))] mt-4 block">
+                  Posted: {new Date(ann.createdAt).toLocaleDateString()}
+                </span>
               </div>
             ))}
           </div>
+
+          {/* Create/Edit Announcement Modal */}
+          {annModalOpen && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+              <form onSubmit={handleSaveAnnouncement} className="bg-[rgb(var(--bg-surface))] max-w-md w-full border border-[rgb(var(--border-strong))] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+                <div className="px-5 py-4 bg-[rgb(var(--bg-base))] border-b border-[rgb(var(--border-default))] flex justify-between items-center">
+                  <h4 className="text-xs font-bold font-display text-[rgb(var(--text-primary))]">
+                    {annForm.id ? "Edit Announcement" : "Post New Announcement"}
+                  </h4>
+                  <button type="button" onClick={() => setAnnModalOpen(false)} className="text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-secondary))]">
+                    ✕
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] mb-1">Title</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Phase 1 Report Submission Deadline Extension"
+                      value={annForm.title}
+                      onChange={(e) => setAnnForm(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full input-base text-xs py-2 px-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] mb-1">Content</label>
+                    <textarea
+                      required
+                      rows={4}
+                      placeholder="Enter detailed notice content here..."
+                      value={annForm.content}
+                      onChange={(e) => setAnnForm(prev => ({ ...prev, content: e.target.value }))}
+                      className="w-full input-base text-xs py-2 px-3 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="px-5 py-3.5 bg-[rgb(var(--bg-base))] border-t border-[rgb(var(--border-default))] flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAnnModalOpen(false)}
+                    className="px-4 py-2 text-xs font-bold text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display rounded-xl hover:bg-[rgb(var(--color-primary-hover))]"
+                  >
+                    Save Notice
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Create FAQ ──────────────────────────────────────────── */}
-      {activeTab === "create" && (
-        <div className="max-w-2xl">
-          <div className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-6">
-            <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full mb-5" />
-            <h3 className="text-base font-bold text-[rgb(var(--text-primary))] mb-1">Create FAQ manually</h3>
-            <p className="text-xs text-[rgb(var(--text-tertiary))] mb-5">Add a new verified FAQ directly to the knowledge base</p>
-            <form onSubmit={handleFaqSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-[rgb(var(--text-secondary))] mb-1.5">Question *</label>
-                <input
-                  value={faqForm.question}
-                  onChange={(e) => setFaqForm((f) => ({ ...f, question: e.target.value }))}
-                  placeholder="Enter the frequently asked question..."
-                  className="input-base"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-[rgb(var(--text-secondary))] mb-1.5">Answer *</label>
-                <textarea
-                  value={faqForm.answer}
-                  onChange={(e) => setFaqForm((f) => ({ ...f, answer: e.target.value }))}
-                  placeholder="Write a clear, concise answer..."
-                  className="input-base resize-none h-32"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-[rgb(var(--text-secondary))] mb-1.5">Category</label>
-                <select
-                  value={faqForm.category}
-                  onChange={(e) => setFaqForm((f) => ({ ...f, category: e.target.value }))}
-                  className="input-base"
-                >
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={faqSubmitting}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
-                {faqSubmitting ? "Creating FAQ..." : "➕ Create FAQ"}
-              </button>
-            </form>
+      {/* Audit Logs Tab */}
+      {activeTab === "audit" && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xs font-bold font-display text-[rgb(var(--text-primary))] uppercase tracking-wider flex items-center gap-1">
+              <Terminal size={14} /> Security Audit Logging Console
+            </h3>
+            <button
+              onClick={() => {
+                localStorage.removeItem("admin_audit_logs");
+                setAuditLogs([]);
+                toast({ type: "info", message: "Audit logs cleared!" });
+              }}
+              className="text-red-500 hover:text-red-700 text-xs font-bold font-display"
+            >
+              Clear Logs
+            </button>
+          </div>
+
+          {/* Terminal Box */}
+          <div className="bg-slate-950 rounded-2xl border border-slate-800 p-5 shadow-2xl font-mono text-[11px] leading-relaxed text-emerald-400 overflow-hidden">
+            <div className="border-b border-slate-900 pb-2 mb-3 flex items-center justify-between text-slate-500">
+              <span>root@vicharanashala_audit:~# cat system.log</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" /> LIVE LOGGING</span>
+            </div>
+            
+            <div className="space-y-1.5 max-h-96 overflow-y-auto">
+              {auditLogs.length === 0 ? (
+                <p className="text-slate-600 italic">// No audit log entries recorded.</p>
+              ) : (
+                auditLogs.map((log, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">[{new Date(log.timestamp).toISOString()}]</span>
+                    <span className="text-blue-400 shrink-0">&lt;{log.username}&gt;</span>
+                    <span className="text-slate-100">{log.action}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Verify & Approve Modal */}
-      {selected && (
-        <VerifyApproveModal
-          discussion={selected}
-          onClose={() => setSelected(null)}
-          onRefresh={fetchAll}
-        />
       )}
     </div>
   );

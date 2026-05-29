@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useCategories } from "../context/CategoryContext";
 
 const SIDEBAR_NAV = [
   {
@@ -11,22 +12,6 @@ const SIDEBAR_NAV = [
       { to: "/discussions", label: "Discussions", icon: "message-circle" },
     ],
   },
-];
-
-const CATEGORY_NAV = [
-  { label: "About the Internship",    icon: "🏢", to: "/faqs/About the Internship" },
-  { label: "Timing and Dates",        icon: "📅", to: "/faqs/Timing and Dates" },
-  { label: "NOC",                     icon: "📄", to: "/faqs/NOC" },
-  { label: "Selection and Offer",     icon: "🎓", to: "/faqs/Selection and Offer Letter" },
-  { label: "Work & Mentorship",       icon: "💼", to: "/faqs/Work and Mentorship" },
-  { label: "Communication",           icon: "📡", to: "/faqs/Communication Channels" },
-  { label: "Interviews",              icon: "🎤", to: "/faqs/Interviews" },
-  { label: "Certificate",             icon: "📜", to: "/faqs/Certificate" },
-  { label: "Rosetta",                 icon: "🔤", to: "/faqs/Rosetta" },
-  { label: "Phase 1 & Coursework",    icon: "📚", to: "/faqs/Phase 1 and Coursework" },
-  { label: "Yaksha Chat",             icon: "💬", to: "/faqs/Yaksha Chat" },
-  { label: "ViBe Platform",           icon: "💻", to: "/faqs/ViBe Platform" },
-  { label: "Team Formation",          icon: "🏗️", to: "/faqs/Team Formation" },
 ];
 
 const ICONS = {
@@ -59,6 +44,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const [catOpen, setCatOpen] = useState(true);
   const { isAdmin } = useAuth();
   const { theme } = useTheme();
+  const { categories } = useCategories();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -104,18 +90,18 @@ export default function Sidebar({ isOpen, onClose }) {
           </button>
           {catOpen && (
             <div className="space-y-0.5">
-              {CATEGORY_NAV.map((item) => (
+              {categories.map((item) => (
                 <button
-                  key={item.to}
-                  onClick={() => { navigate(item.to); onClose(); }}
+                  key={item.name}
+                  onClick={() => { navigate(`/faqs/${item.name}`); onClose(); }}
                   className={`w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
-                    isCategoryActive(item.to)
-                      ? "bg-indigo-100 dark:bg-indigo-900/smi text-indigo-600 dark:text-indigo-300 font-semibold"
+                    isCategoryActive(`/faqs/${item.name}`)
+                      ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-semibold"
                       : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))]"
                   }`}
                 >
-                  <CategoryIcon icon={item.icon} />
-                  <span className="truncate">{item.label}</span>
+                  <CategoryIcon icon={item.icon || "📁"} />
+                  <span className="truncate">{item.name}</span>
                 </button>
               ))}
             </div>

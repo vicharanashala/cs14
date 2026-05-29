@@ -1,10 +1,12 @@
-require("dotenv").config({ path: "./backend/.env" });
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const User = require("./models/User");
 const Faq = require("./models/Faq");
 const Discussion = require("./models/Discussion");
 const Announcement = require("./models/Announcement");
+const Category = require("./models/Category");
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://harshitjain1234:8HxKCzLNrB0w6H38@cluster0.qbq8xzm.mongodb.net/faqDB";
 
@@ -27,6 +29,49 @@ const CATEGORIES = [
 async function seed() {
   await mongoose.connect(MONGO_URI);
   console.log("Connected to MongoDB for seeding\n");
+
+  const force = process.argv.includes("--force");
+  if (force) {
+    console.log("⚠️  Force flag detected. Dropping existing collections...");
+    await User.deleteMany({});
+    await Faq.deleteMany({});
+    await Discussion.deleteMany({});
+    await Announcement.deleteMany({});
+    await Category.deleteMany({});
+    console.log("✓ Dropped all collections.\n");
+  }
+
+  // 0. Seed Categories
+  const categoryCount = await Category.countDocuments();
+  if (categoryCount === 0) {
+    console.log("🌱 Seeding Categories...");
+    const icons = {
+      "About the Internship": "🎓",
+      "Timing and Dates": "📅",
+      "NOC": "📝",
+      "Selection and Offer Letter": "✉️",
+      "Work and Mentorship": "💻",
+      "Communication Channels": "💬",
+      "Interviews": "🗣️",
+      "Certificate": "📜",
+      "Rosetta": "🌹",
+      "Phase 1 and Coursework": "📖",
+      "Yaksha Chat": "🤖",
+      "ViBe Platform": "🌐",
+      "Team Formation": "👥",
+    };
+    const categoryDocs = CATEGORIES.map(name => ({
+      name,
+      description: `Discussions and FAQs regarding ${name}`,
+      icon: icons[name] || "📁"
+    }));
+    // Add "Other" as a fallback category
+    if (!CATEGORIES.includes("Other")) {
+      categoryDocs.push({ name: "Other", description: "Other general queries", icon: "📁" });
+    }
+    await Category.insertMany(categoryDocs);
+    console.log(`✓ Seeded ${categoryDocs.length} categories.\n`);
+  }
 
   // 1. Create users only if they don't exist
   const adminExists = await User.findOne({ email: "admin@faq.com" });

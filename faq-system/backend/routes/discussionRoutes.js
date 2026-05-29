@@ -14,7 +14,10 @@ router.get("/", async (req, res) => {
     if (status) filter.status = status;
     if (search) filter.title = { $regex: search, $options: "i" };
 
-    let query = Discussion.find(filter).populate("author", "username");
+    let query = Discussion.find(filter)
+      .populate("author", "username")
+      .populate("answers.author", "username")
+      .populate("comments.author", "username");
 
     if (sort === "upvotes") {
       query = query.sort({ upvotes: -1 });

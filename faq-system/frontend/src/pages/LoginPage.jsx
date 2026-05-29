@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const res = await api.post("/auth/login", form);
       login(res.data.token);
-      navigate(res.data.user?.role === "admin" ? "/admin" : "/");
+      navigate(res.data.role === "admin" ? "/admin" : "/");
     } catch (err) {
       setError(err.response?.data?.message || "Invalid credentials. Try again.");
     } finally {
@@ -29,6 +29,7 @@ export default function LoginPage() {
   };
 
   const { login } = useAuth();
+
 
   return (
     <div className="w-full">
@@ -65,7 +66,8 @@ export default function LoginPage() {
                   value={form.username}
                   onChange={handleChange}
                   placeholder="Enter your username"
-                  className="input-base pl-10"
+                  className="input-base"
+                  style={{ paddingLeft: "2.75rem" }}
                   autoComplete="username"
                 />
               </div>
@@ -81,7 +83,8 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className="input-base pl-10 pr-10"
+                  className="input-base"
+                  style={{ paddingLeft: "2.75rem", paddingRight: "2.75rem" }}
                   autoComplete="current-password"
                 />
                 <button
@@ -107,6 +110,7 @@ export default function LoginPage() {
               ) : "Sign in"}
             </button>
           </form>
+
 
           <p className="text-center text-sm text-[rgb(var(--text-tertiary))] mt-6">
             Don't have an account?{" "}

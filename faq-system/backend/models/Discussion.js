@@ -20,21 +20,6 @@ const discussionSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: [
-      "About the Internship",
-      "Timing and Dates",
-      "NOC",
-      "Selection and Offer Letter",
-      "Work and Mentorship",
-      "Communication Channels",
-      "Interviews",
-      "Certificate",
-      "Rosetta",
-      "Phase 1 and Coursework",
-      "Yaksha Chat",
-      "ViBe Platform",
-      "Team Formation",
-    ],
   },
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   status: {
