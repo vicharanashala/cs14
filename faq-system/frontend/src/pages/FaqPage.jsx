@@ -1,251 +1,193 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
 
-const CATEGORIES = [
-  "About the Internship",
-  "Timing and Dates",
-  "NOC",
-  "Selection and Offer Letter",
-  "Work and Mentorship",
-  "Communication Channels",
-  "Interviews",
-  "Certificate",
-  "Rosetta",
-  "Phase 1 and Coursework",
-  "Yaksha Chat",
-  "ViBe Platform",
-  "Team Formation",
-];
-
-const CATEGORY_COLORS = {
-  "About the Internship": "bg-blue-100 text-blue-800",
-  "Timing and Dates": "bg-green-100 text-green-800",
-  "NOC": "bg-yellow-100 text-yellow-800",
-  "Selection and Offer Letter": "bg-purple-100 text-purple-800",
-  "Work and Mentorship": "bg-red-100 text-red-800",
-  "Communication Channels": "bg-pink-100 text-pink-800",
-  "Interviews": "bg-indigo-100 text-indigo-800",
-  "Certificate": "bg-teal-100 text-teal-800",
-  "Rosetta": "bg-orange-100 text-orange-800",
-  "Phase 1 and Coursework": "bg-cyan-100 text-cyan-800",
-  "Yaksha Chat": "bg-lime-100 text-lime-800",
-  "ViBe Platform": "bg-rose-100 text-rose-800",
-  "Team Formation": "bg-amber-100 text-amber-800",
+const HUE_MAP = {
+  "About the Internship":    { from: "from-indigo-500", to: "to-indigo-600", accent: "text-indigo-500" },
+  "Timing and Dates":         { from: "from-amber-500",  to: "to-orange-500",  accent: "text-amber-500" },
+  "NOC":                      { from: "from-emerald-500",to: "teal-500",      accent: "text-emerald-500" },
+  "Selection and Offer Letter":{ from: "from-purple-500", to: "to-pink-500",  accent: "text-purple-500" },
+  "Work and Mentorship":      { from: "from-blue-500",   to: "to-cyan-500",   accent: "text-blue-500" },
+  "Communication Channels":   { from: "from-teal-500",  to: "to-emerald-500",accent: "text-teal-500" },
+  "Interviews":               { from: "from-rose-500",   to: "to-pink-500",   accent: "text-rose-500" },
+  "Certificate":              { from: "from-yellow-500",  to: "to-amber-500",  accent: "text-yellow-500" },
+  "Rosetta":                  { from: "from-fuchsia-500", to: "to-purple-500", accent: "text-fuchsia-500" },
+  "Phase 1 and Coursework":   { from: "from-orange-500",  to: "to-red-500",    accent: "text-orange-500" },
+  "Yaksha Chat":              { from: "from-violet-500",  to: "to-purple-500", accent: "text-violet-500" },
+  "ViBe Platform":           { from: "from-sky-500",     to: "to-blue-500",   accent: "text-sky-500" },
+  "Team Formation":          { from: "from-indigo-500",  to: "to-violet-500", accent: "text-indigo-500" },
 };
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
+const CATEGORY_ICONS = {
+  "About the Internship": "🏢", "Timing and Dates": "📅", "NOC": "📄",
+  "Selection and Offer Letter": "🎓", "Work and Mentorship": "💼", "Communication Channels": "📡",
+  "Interviews": "🎤", "Certificate": "📜", "Rosetta": "🔤", "Phase 1 and Coursework": "📚",
+  "Yaksha Chat": "💬", "ViBe Platform": "💻", "Team Formation": "🏗️",
+};
 
 export default function FaqPage() {
   const { category } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const decoded = decodeURIComponent(category || "");
+  const hue = HUE_MAP[decoded] || { from: "from-indigo-500", to: "to-indigo-600", accent: "text-indigo-500" };
+  const icon = CATEGORY_ICONS[decoded] || "📖";
+
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [expandedId, setExpandedId] = useState(null);
-  const [copiedId, setCopiedId] = useState(null);
-
-  const decodedCategory = decodeURIComponent(category || "");
-  const isValidCategory = CATEGORIES.includes(decodedCategory);
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    if (!isValidCategory) {
-      navigate("/");
-      return;
-    }
-    setSearchQuery("");
-    setSearchPerformed(false);
-    setSearchResults([]);
-    setExpandedId(null);
-    fetchFaqs();
-  }, [category]);
-
-  const fetchFaqs = () => {
     setLoading(true);
-    api.get("/faqs?category=" + encodeURIComponent(decodedCategory))
-      .then((res) => setFaqs(res.data))
-      .catch(() => {})
+    setExpanded(null);
+    api.get(`/faqs?category=${encodeURIComponent(decoded)}`)
+      .then((r) => setFaqs(r.data || []))
+      .catch(() => setFaqs([]))
       .finally(() => setLoading(false));
-  };
+  }, [decoded]);
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      setSearchPerformed(false);
-      setSearchResults([]);
-      return;
-    }
-    setSearchLoading(true);
-    setSearchPerformed(true);
-    api.get("/faqs?category=" + encodeURIComponent(decodedCategory) + "&search=" + encodeURIComponent(searchQuery.trim()))
-      .then((res) => setSearchResults(res.data))
-      .catch(() => {})
-      .finally(() => setSearchLoading(false));
-  };
+  const filtered = faqs.filter((f) =>
+    f.question.toLowerCase().includes(search.toLowerCase()) ||
+    (f.answer || "").toLowerCase().includes(search.toLowerCase())
+  );
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSearch();
+  const copyAnswer = (text) => {
+    navigator.clipboard.writeText(text).catch(() => {});
   };
-
-  const handleCopy = (text, id) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
-    });
-  };
-
-  const displayFaqs = searchPerformed ? searchResults : faqs;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Left Sidebar */}
-      <aside className="w-56 bg-white border-r border-gray-200 p-4 shrink-0">
-        <h3 className="font-semibold text-gray-700 mb-3">Categories</h3>
-        <div className="space-y-1">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => navigate("/faqs/" + encodeURIComponent(cat))}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                decodedCategory === cat
-                  ? "bg-blue-100 text-blue-700 font-medium"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <Link
-            to="/discussions"
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+    <div className="flex gap-6 min-h-[calc(100vh-4rem)]">
+      {/* Left sidebar — desktop */}
+      <aside className="hidden lg:flex flex-col w-56 shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pr-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))] mb-3 px-2">
+          Categories
+        </p>
+        {Object.keys(HUE_MAP).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => navigate(`/faqs/${encodeURIComponent(cat)}`)}
+            className={`w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
+              cat === decoded
+                ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-semibold"
+                : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))]"
+            }`}
           >
-            💬 Discussions
-          </Link>
-        </div>
+            <span>{CATEGORY_ICONS[cat]}</span>
+            <span className="truncate">{cat}</span>
+          </button>
+        ))}
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <span className={`text-xs px-2 py-1 rounded font-medium ${CATEGORY_COLORS[decodedCategory] || "bg-gray-100 text-gray-700"}`}>
-              {decodedCategory}
-            </span>
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        {/* Category header */}
+        <div className={`mb-6 p-5 rounded-2xl bg-gradient-to-r ${hue.from} ${hue.to} text-white`}>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">{icon}</span>
+            <h1 className="text-xl font-black">{decoded}</h1>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{decodedCategory}</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {loading ? "Loading..." : `${faqs.length} FAQ${faqs.length !== 1 ? "s" : ""}`}
+          <p className="text-white/80 text-sm">
+            {loading ? "Loading..." : `${filtered.length} verified FAQ${filtered.length !== 1 ? "s" : ""}`}
           </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={"Search within " + decodedCategory + "..."}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={searchLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:bg-blue-400"
-            >
-              {searchLoading ? "Searching..." : "Search"}
-            </button>
-            {searchPerformed && (
-              <button
-                onClick={() => { setSearchPerformed(false); setSearchQuery(""); }}
-                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-              >
-                Clear
+        {/* Search */}
+        <div className="relative mb-5">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))]" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${decoded} FAQs...`}
+            className="input-base pl-10"
+          />
+        </div>
+
+        {/* FAQ list */}
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-5">
+                <div className="skeleton h-4 w-3/4 mb-3 rounded" />
+                <div className="skeleton h-3 w-full mb-2 rounded" />
+                <div className="skeleton h-3 w-2/3 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-4xl mb-3">🔍</div>
+            <p className="text-[rgb(var(--text-secondary))] text-sm">No FAQs found{search ? " for your search" : ""}</p>
+            {search && (
+              <button onClick={() => setSearch("")} className="mt-2 text-xs text-indigo-500 hover:underline">
+                Clear search
               </button>
             )}
           </div>
-        </div>
-
-        {/* FAQ List */}
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-                <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
-                <div className="h-4 bg-gray-100 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-100 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        ) : displayFaqs.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <p className="text-gray-500 mb-2">No FAQs found in this category.</p>
-            <p className="text-sm text-gray-400">
-              Can't find what you need?{" "}
-              <Link to="/discussions" className="text-blue-600 hover:underline">
-                Ask in Discussions
-              </Link>
-            </p>
-          </div>
         ) : (
-          <div className="space-y-4">
-            {displayFaqs.map((faq) => (
-              <div key={faq._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                <button
-                  onClick={() => setExpandedId(expandedId === faq._id ? null : faq._id)}
-                  className="w-full text-left px-6 py-4 flex items-start justify-between gap-4 hover:bg-gray-50 transition-colors"
+          <div className="space-y-3 stagger-children">
+            {filtered.map((faq, i) => {
+              const isOpen = expanded === faq._id;
+              return (
+                <div
+                  key={faq._id}
+                  className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl overflow-hidden card-hover"
                 >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-base">{faq.question}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded ${CATEGORY_COLORS[faq.category] || "bg-gray-100 text-gray-700"}`}>
-                        {faq.category}
-                      </span>
-                      {faq.status && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">
-                          {faq.status}
+                  {/* Question */}
+                  <button
+                    className="w-full text-left px-5 py-4 flex items-start gap-3"
+                    onClick={() => setExpanded(isOpen ? null : faq._id)}
+                  >
+                    <div className={`shrink-0 mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      isOpen ? `bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300` : "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-tertiary))]"
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[rgb(var(--text-primary))] leading-snug">{faq.question}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isOpen ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300" : "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-tertiary))]"}`}>
+                          {faq.category}
                         </span>
-                      )}
-                      <span className="text-xs text-gray-400">👍 {faq.upvotes || 0}</span>
-                      <span className="text-xs text-gray-400">{formatDate(faq.createdAt)}</span>
+                        {faq.upvotes > 0 && (
+                          <span className="text-[10px] text-[rgb(var(--text-tertiary))]">▲ {faq.upvotes} upvotes</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <span className={"shrink-0 text-gray-400 transition-transform " + (expandedId === faq._id ? "rotate-180" : "")}>
-                    ▼
-                  </span>
-                </button>
+                    <svg
+                      className={`shrink-0 mt-1 text-[rgb(var(--text-tertiary))] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
 
-                {expandedId === faq._id && (
-                  <div className="px-6 pb-5 border-t border-gray-100 pt-4">
-                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{faq.answer}</p>
-                    <div className="flex items-center gap-3 mt-4">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleCopy(faq.answer, faq._id); }}
-                        className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
-                      >
-                        {copiedId === faq._id ? "✓ Copied" : "Copy Answer"}
-                      </button>
+                  {/* Answer */}
+                  {isOpen && (
+                    <div className="px-5 pb-5 pt-0">
+                      <div className="ml-9 p-4 bg-[rgb(var(--bg-base))] dark:bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-default))]">
+                        <p className="text-sm text-[rgb(var(--text-secondary))] leading-relaxed whitespace-pre-wrap">
+                          {faq.answer}
+                        </p>
+                        <button
+                          onClick={() => copyAnswer(faq.answer)}
+                          className="mt-3 flex items-center gap-1.5 text-xs text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                          </svg>
+                          Copy answer
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

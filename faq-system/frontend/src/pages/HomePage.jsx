@@ -1,279 +1,227 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = [
-  "About the Internship",
-  "Timing and Dates",
-  "NOC",
-  "Selection and Offer Letter",
-  "Work and Mentorship",
-  "Communication Channels",
-  "Interviews",
-  "Certificate",
-  "Rosetta",
-  "Phase 1 and Coursework",
-  "Yaksha Chat",
-  "ViBe Platform",
-  "Team Formation",
+  { name: "About the Internship", icon: "🏢", desc: "Overview, eligibility, expectations", count: 12 },
+  { name: "Timing and Dates", icon: "📅", desc: "Important dates and deadlines", count: 5 },
+  { name: "NOC", icon: "📄", desc: "No Objection Certificate queries", count: 13 },
+  { name: "Selection and Offer Letter", icon: "🎓", desc: "Selection process and offers", count: 26 },
+  { name: "Work and Mentorship", icon: "💼", desc: "Roles, responsibilities, mentors", count: 4 },
+  { name: "Communication Channels", icon: "📡", desc: "Slack, email, emergency contacts", count: 2 },
+  { name: "Interviews", icon: "🎤", desc: "Interview process and tips", count: 0 },
+  { name: "Certificate", icon: "📜", desc: "Certificate issuance and details", count: 0 },
+  { name: "Rosetta", icon: "🔤", desc: "Language learning platform", count: 5 },
+  { name: "Phase 1 and Coursework", icon: "📚", desc: "Course structure and grading", count: 8 },
+  { name: "Yaksha Chat", icon: "💬", desc: "Yaksha platform questions", count: 0 },
+  { name: "ViBe Platform", icon: "💻", desc: "ViBe tool and features", count: 21 },
+  { name: "Team Formation", icon: "🏗️", desc: "Team setup and collaboration", count: 17 },
 ];
 
-const CATEGORY_COLORS = {
-  "About the Internship": "bg-blue-100 text-blue-800",
-  "Timing and Dates": "bg-green-100 text-green-800",
-  "NOC": "bg-yellow-100 text-yellow-800",
-  "Selection and Offer Letter": "bg-purple-100 text-purple-800",
-  "Work and Mentorship": "bg-red-100 text-red-800",
-  "Communication Channels": "bg-pink-100 text-pink-800",
-  "Interviews": "bg-indigo-100 text-indigo-800",
-  "Certificate": "bg-teal-100 text-teal-800",
-  "Rosetta": "bg-orange-100 text-orange-800",
-  "Phase 1 and Coursework": "bg-cyan-100 text-cyan-800",
-  "Yaksha Chat": "bg-lime-100 text-lime-800",
-  "ViBe Platform": "bg-rose-100 text-rose-800",
-  "Team Formation": "bg-amber-100 text-amber-800",
-};
+const STATS = [
+  { label: "Total FAQs", value: "105+", icon: "📖", color: "from-indigo-500 to-blue-500" },
+  { label: "Categories", value: "13", icon: "🏷️", color: "from-purple-500 to-pink-500" },
+  { label: "Discussions", value: "6", icon: "💬", color: "from-amber-500 to-orange-500" },
+  { label: "Weekly Users", value: "200+", icon: "👥", color: "from-emerald-500 to-teal-500" },
+];
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+const FEATURES = [
+  {
+    icon: "🔍",
+    title: "Smart Search",
+    desc: "Find answers instantly with our AI-powered search across all categories.",
+  },
+  {
+    icon: "💬",
+    title: "Community Discussions",
+    desc: "Ask questions, share experiences, and get answers from fellow interns.",
+  },
+  {
+    icon: "✅",
+    title: "Vetted Answers",
+    desc: "Every FAQ is verified by the admin team before publication.",
+  },
+  {
+    icon: "📊",
+    title: "Real-time Updates",
+    desc: "Stay current with the latest announcements and policy changes.",
+  },
+];
 
 export default function HomePage() {
   const [announcements, setAnnouncements] = useState([]);
-  const [trendingFaqs, setTrendingFaqs] = useState([]);
-  const [recentFaqs, setRecentFaqs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchPerformed, setSearchPerformed] = useState(false);
-
-  const { currentUser, logout } = useAuth();
+  const [categoryFaqs, setCategoryFaqs] = useState({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/announcements").then((res) => {
-      setAnnouncements(res.data.slice(0, 2));
+    Promise.all([
+      api.get("/announcements").catch(() => ({ data: [] })),
+      api.get("/faqs?limit=100").catch(() => ({ data: [] })),
+    ]).then(([annRes, faqRes]) => {
+      setAnnouncements(annRes.data.slice(0, 3));
+      const grouped = {};
+      (faqRes.data || []).forEach((faq) => {
+        if (!grouped[faq.category]) grouped[faq.category] = [];
+        grouped[faq.category].push(faq);
+      });
+      setCategoryFaqs(grouped);
+      setLoading(false);
     });
-    api.get("/faqs/trending").then((res) => setTrendingFaqs(res.data));
-    api.get("/faqs/recent").then((res) => setRecentFaqs(res.data));
   }, []);
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    setSearchLoading(true);
-    setSearchPerformed(true);
-    api.get(`/faqs?search=${encodeURIComponent(searchQuery)}`).then((res) => {
-      setSearchResults(res.data);
-      setSearchLoading(false);
-    }).catch(() => {
-      setSearchLoading(false);
-    });
-  };
+  // Get recent FAQs across categories
+  const recentFaqs = Object.values(categoryFaqs)
+    .flat()
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 6);
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSearch();
-  };
+  // Popular = top upvoted
+  const popularFaqs = Object.values(categoryFaqs)
+    .flat()
+    .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+    .slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Announcements */}
-      {announcements.length > 0 && (
-        <div className="bg-amber-50 border-b border-amber-200">
-          <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
-            {announcements.map((a) => (
-              <div key={a._id} className="flex gap-2 text-sm">
-                <span className="font-bold text-amber-800 whitespace-nowrap">📢 {a.title}:</span>
-                <span className="text-amber-700">{a.content}</span>
+    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-default))]">
+        {/* Gradient orbs */}
+        <div className="orb-gradient w-96 h-96 bg-indigo-500 top-0 left-1/4" />
+        <div className="orb-gradient w-72 h-72 bg-purple-500 top-10 right-1/4" />
+        <div className="orb-gradient w-64 h-64 bg-pink-500 bottom-0 left-1/2" />
+
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
+          {/* Announcement banner */}
+          {announcements.length > 0 && (
+            <div className="mb-10 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl animate-fade-in">
+              <span className="text-lg">📌</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{announcements[0].title}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 line-clamp-2">{announcements[0].content}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Nav bar */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="font-semibold text-gray-800">FAQ System</span>
-          <div className="flex items-center gap-3">
-            {currentUser ? (
-              <>
-                <span className="text-sm text-gray-600">
-                  Hi, {currentUser.username}
-                  {currentUser.role === "admin" && (
-                    <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                      Admin
-                    </span>
-                  )}
-                </span>
-                <button
-                  onClick={logout}
-                  className="text-sm text-red-600 hover:text-red-700"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate("/login")}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate("/register")}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Register
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-12">
-        {/* Hero + Search */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900">FAQ Management System</h1>
-          <p className="text-gray-500 text-lg">Search for answers or browse by category</p>
-          <div className="flex max-w-xl mx-auto gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search FAQs..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={searchLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-            >
-              {searchLoading ? "Searching..." : "Search"}
-            </button>
-          </div>
-        </div>
-
-        {/* Search Results */}
-        {searchPerformed && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Search Results</h2>
-            {searchResults.length === 0 ? (
-              <p className="text-gray-500">
-                No FAQs found. Try asking in{" "}
-                <button
-                  onClick={() => navigate("/discussions")}
-                  className="text-blue-600 hover:underline"
-                >
-                  Discussions
-                </button>
-                .
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {searchResults.map((faq) => (
-                  <div key={faq._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <p className="font-semibold text-gray-900">{faq.question}</p>
-                    <p className="text-gray-600 text-sm mt-1">{faq.answer}</p>
-                    <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${CATEGORY_COLORS[faq.category] || "bg-gray-100 text-gray-700"}`}>
-                      {faq.category}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Category Cards */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Browse by Category</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {CATEGORIES.map((cat) => (
+          {/* Hero text */}
+          <div className="text-center max-w-3xl mx-auto mb-14 animate-fade-in-up">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-xs font-semibold text-indigo-600 dark:text-indigo-300 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              Live · Updated May 2025
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[rgb(var(--text-primary))] leading-tight mb-5">
+              Everything you need to
+              <span className="text-gradient block">know about your internship</span>
+            </h1>
+            <p className="text-lg text-[rgb(var(--text-secondary))] mb-8 max-w-xl mx-auto">
+              The central knowledge base for all interns. Browse verified FAQs, join discussions, and find answers fast.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
-                key={cat}
-                onClick={() => navigate("/faqs/" + encodeURIComponent(cat))}
-                className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm"
+                onClick={() => navigate("/faqs/About the Internship")}
+                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
-                {cat}
+                Browse all FAQs →
               </button>
+              <button
+                onClick={() => navigate("/discussions")}
+                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] text-sm font-semibold text-[rgb(var(--text-primary))] hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
+              >
+                Join discussions
+              </button>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
+            {STATS.map((stat) => (
+              <div key={stat.label}
+                className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4 text-center hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-lg mb-2 mx-auto`}>
+                  {stat.icon}
+                </div>
+                <p className="text-2xl font-black text-[rgb(var(--text-primary))]">{stat.value}</p>
+                <p className="text-xs text-[rgb(var(--text-tertiary))] font-medium">{stat.label}</p>
+              </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Trending FAQs */}
-        {trendingFaqs.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">🔥 Trending FAQs</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {trendingFaqs.map((faq) => (
-                <div key={faq._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <p className="font-semibold text-gray-900">{faq.question}</p>
-                  <p className="text-gray-600 text-sm mt-1">
-                    {faq.answer.length > 100 ? faq.answer.slice(0, 100) + "..." : faq.answer}
-                  </p>
-                  <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
-                    <span>👍 {faq.upvotes}</span>
-                    <span className={`ml-2 text-xs px-2 py-0.5 rounded ${CATEGORY_COLORS[faq.category] || "bg-gray-100 text-gray-700"}`}>
-                      {faq.category}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recent FAQs */}
-        {recentFaqs.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">📋 Recently Added FAQs</h2>
-            <div className="space-y-3">
-              {recentFaqs.map((faq) => (
-                <div key={faq._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <p className="font-semibold text-gray-900">{faq.question}</p>
-                  <p className="text-gray-600 text-sm mt-1">
-                    {faq.answer.length > 100 ? faq.answer.slice(0, 100) + "..." : faq.answer}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${CATEGORY_COLORS[faq.category] || "bg-gray-100 text-gray-700"}`}>
-                      {faq.category}
-                    </span>
-                    <span className="text-xs text-gray-400">{formatDate(faq.createdAt)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Discussions CTA */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-          <p className="text-blue-800 font-medium">Can't find what you're looking for?</p>
-          <p className="text-blue-600 text-sm mt-1">
-            Ask the community in the{" "}
-            <button
-              onClick={() => navigate("/discussions")}
-              className="text-blue-700 font-semibold hover:underline"
-            >
-              Discussions
-            </button>{" "}
-            section.
-          </p>
+      {/* ── Features ─────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">Built for interns, by admins</h2>
+          <p className="text-sm text-[rgb(var(--text-secondary))]">Everything you need to navigate your internship journey</p>
         </div>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+          {FEATURES.map((f) => (
+            <div key={f.title}
+              className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-5 card-hover">
+              <div className="text-2xl mb-3">{f.icon}</div>
+              <h3 className="text-sm font-bold text-[rgb(var(--text-primary))] mb-1.5">{f.title}</h3>
+              <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white mt-8">
-        <div className="max-w-5xl mx-auto px-4 py-4 text-center text-sm text-gray-400">
-          FAQ Management System | Help | Support
+      {/* ── Categories ──────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-[rgb(var(--text-primary))]">Browse by category</h2>
+            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">Pick a topic to explore verified FAQs</p>
+          </div>
+          <span className="text-xs font-semibold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
+            {CATEGORIES.length} categories
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 stagger-children">
+          {CATEGORIES.map((cat) => {
+            const hasFaqs = (categoryFaqs[cat.name] || []).length > 0;
+            return (
+              <button
+                key={cat.name}
+                onClick={() => navigate(`/faqs/${encodeURIComponent(cat.name)}`)}
+                className="group text-left bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4 card-hover relative overflow-hidden"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[rgb(var(--bg-hover))] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
+                    {cat.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[rgb(var(--text-primary))] truncate">{cat.name}</p>
+                    <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5 line-clamp-1">{cat.desc}</p>
+                    {hasFaqs && (
+                      <span className="inline-flex items-center mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">
+                        {categoryFaqs[cat.name].length} FAQs
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Footer ──────────────────────────────────────────── */}
+      <footer className="border-t border-[rgb(var(--border-default))] bg-[rgb(var(--bg-surface))]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black">
+                FAQ
+              </div>
+              <span className="text-sm font-bold text-[rgb(var(--text-primary))]">HelpDesk</span>
+              <span className="text-xs text-[rgb(var(--text-tertiary))]">· Internship FAQ System</span>
+            </div>
+            <p className="text-xs text-[rgb(var(--text-tertiary))]">
+              © 2025 HelpDesk · Built for the intern community
+            </p>
+          </div>
         </div>
       </footer>
     </div>
