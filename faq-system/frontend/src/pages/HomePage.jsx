@@ -64,6 +64,7 @@ function NoticeBoard({ announcements }) {
 
   if (!announcements.length || !visible) return null;
 
+  const current = announcements[idx];
   const next = () => setIdx((i) => (i + 1) % announcements.length);
   const prev = () => setIdx((i) => (i - 1 + announcements.length) % announcements.length);
 
