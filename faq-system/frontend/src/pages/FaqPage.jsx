@@ -1,278 +1,256 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = [
-  { name: "About the Internship", icon: "🏢", color: "from-blue-500 to-blue-600", bg: "bg-blue-50", text: "text-blue-700", light: "bg-blue-100" },
-  { name: "Timing and Dates", icon: "📅", color: "from-green-500 to-green-600", bg: "bg-green-50", text: "text-green-700", light: "bg-green-100" },
-  { name: "NOC", icon: "📋", color: "from-yellow-500 to-yellow-600", bg: "bg-yellow-50", text: "text-yellow-700", light: "bg-yellow-100" },
-  { name: "Selection and Offer Letter", icon: "🎓", color: "from-purple-500 to-purple-600", bg: "bg-purple-50", text: "text-purple-700", light: "bg-purple-100" },
-  { name: "Work and Mentorship", icon: "💼", color: "from-red-500 to-red-600", bg: "bg-red-50", text: "text-red-700", light: "bg-red-100" },
-  { name: "Communication Channels", icon: "💬", color: "from-pink-500 to-pink-600", bg: "bg-pink-50", text: "text-pink-700", light: "bg-pink-100" },
-  { name: "Interviews", icon: "🎯", color: "from-indigo-500 to-indigo-600", bg: "bg-indigo-50", text: "text-indigo-700", light: "bg-indigo-100" },
-  { name: "Certificate", icon: "📜", color: "from-teal-500 to-teal-600", bg: "bg-teal-50", text: "text-teal-700", light: "bg-teal-100" },
-  { name: "Rosetta", icon: "🪨", color: "from-orange-500 to-orange-600", bg: "bg-orange-50", text: "text-orange-700", light: "bg-orange-100" },
-  { name: "Phase 1 and Coursework", icon: "📚", color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", text: "text-cyan-700", light: "bg-cyan-100" },
-  { name: "Yaksha Chat", icon: "💭", color: "from-lime-500 to-lime-600", bg: "bg-lime-50", text: "text-lime-700", light: "bg-lime-100" },
-  { name: "ViBe Platform", icon: "🎨", color: "from-rose-500 to-rose-600", bg: "bg-rose-50", text: "text-rose-700", light: "bg-rose-100" },
-  { name: "Team Formation", icon: "👥", color: "from-amber-500 to-amber-600", bg: "bg-amber-50", text: "text-amber-700", light: "bg-amber-100" },
+  { name: "About the Internship", icon: "🏢", hue: "indigo" },
+  { name: "Timing and Dates", icon: "📅", hue: "emerald" },
+  { name: "NOC", icon: "📋", hue: "amber" },
+  { name: "Selection and Offer Letter", icon: "🎓", hue: "purple" },
+  { name: "Work and Mentorship", icon: "💼", hue: "rose" },
+  { name: "Communication Channels", icon: "💬", hue: "pink" },
+  { name: "Interviews", icon: "🎯", hue: "blue" },
+  { name: "Certificate", icon: "📜", hue: "teal" },
+  { name: "Rosetta", icon: "🪨", hue: "orange" },
+  { name: "Phase 1 and Coursework", icon: "📚", hue: "cyan" },
+  { name: "Yaksha Chat", icon: "💭", hue: "lime" },
+  { name: "ViBe Platform", icon: "🎨", hue: "fuchsia" },
+  { name: "Team Formation", icon: "👥", hue: "yellow" },
 ];
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
-
-function SkeletonItem() {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
-      <div className="h-5 bg-slate-200 rounded w-3/4 mb-3" />
-      <div className="h-3 bg-slate-100 rounded w-full mb-2" />
-      <div className="h-3 bg-slate-100 rounded w-2/3 mb-3" />
-      <div className="flex gap-2 pt-3 border-t border-slate-100">
-        <div className="h-5 bg-slate-100 rounded-full w-20" />
-        <div className="h-5 bg-slate-100 rounded-full w-16" />
-      </div>
-    </div>
-  );
-}
+const HUE_ACCENT = {
+  indigo: "from-indigo-500 to-blue-500",
+  emerald: "from-emerald-500 to-teal-500",
+  amber: "from-amber-500 to-orange-500",
+  purple: "from-purple-500 to-fuchsia-500",
+  rose: "from-rose-500 to-pink-500",
+  pink: "from-pink-500 to-rose-500",
+  blue: "from-blue-500 to-cyan-500",
+  teal: "from-teal-500 to-green-500",
+  orange: "from-orange-500 to-amber-500",
+  cyan: "from-cyan-500 to-blue-500",
+  lime: "from-lime-500 to-green-500",
+  fuchsia: "from-fuchsia-500 to-purple-500",
+  yellow: "from-yellow-500 to-amber-500",
+};
 
 export default function FaqPage() {
   const { category } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [expandedId, setExpandedId] = useState(null);
+  const [activeAnswer, setActiveAnswer] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const decodedCategory = decodeURIComponent(category || "");
-  const catMeta = CATEGORIES.find((c) => c.name === decodedCategory);
-  const isValidCategory = CATEGORIES.some((c) => c.name === decodedCategory);
+  const currentCat = CATEGORIES.find((c) => c.name === decodeURIComponent(category || ""));
+  const gradient = HUE_ACCENT[currentCat?.hue || "indigo"];
 
   useEffect(() => {
-    if (!isValidCategory) { navigate("/"); return; }
-    setSearchQuery("");
-    setSearchPerformed(false);
-    setSearchResults([]);
-    setExpandedId(null);
-    setSidebarOpen(false);
-    fetchFaqs();
+    setLoading(true);
+    setActiveAnswer(null);
+    api.get("/faqs?category=" + encodeURIComponent(category || ""))
+      .then((r) => setFaqs(r.data))
+      .catch(() => setFaqs([]))
+      .finally(() => setLoading(false));
   }, [category]);
 
-  const fetchFaqs = () => {
-    setLoading(true);
-    api.get("/faqs?category=" + encodeURIComponent(decodedCategory))
-      .then((res) => setFaqs(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+  const filtered = faqs.filter(
+    (f) => !searchQuery || f.question.toLowerCase().includes(searchQuery.toLowerCase()) || f.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) { setSearchPerformed(false); setSearchResults([]); return; }
-    setSearchLoading(true);
-    setSearchPerformed(true);
-    api.get("/faqs?category=" + encodeURIComponent(decodedCategory) + "&search=" + encodeURIComponent(searchQuery.trim()))
-      .then((res) => setSearchResults(res.data))
-      .catch(() => {})
-      .finally(() => setSearchLoading(false));
-  };
-
-  const handleCopy = (text, id) => {
+  function copyAnswer(text, id) {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
+      setTimeout(() => setCopiedId(null), 2000);
     });
-  };
-
-  const displayFaqs = searchPerformed ? searchResults : faqs;
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <aside className={"fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 p-5 transform transition-transform duration-300 lg:relative lg:translate-x-0 lg:shrink-0 " + (sidebarOpen ? "translate-x-0" : "-translate-x-full")}>
-        <div className="flex items-center justify-between mb-6 lg:hidden">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-sm">📚</div>
-            <span className="font-bold text-slate-800">FAQ System</span>
-          </div>
-          <button onClick={() => setSidebarOpen(false)} className="text-slate-500 hover:text-slate-700 text-lg">✕</button>
+    <div className="max-w-6xl mx-auto px-4 pt-5 pb-28 md:pb-10">
+      {/* ── Mobile: sticky category header ── */}
+      <div className="md:hidden sticky top-14 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200 -mx-4 px-4 py-3 flex items-center gap-3">
+        <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all">
+          ☰
+        </button>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {currentCat && (
+            <>
+              <div className={"w-8 h-8 rounded-lg bg-gradient-to-br " + gradient + " flex items-center justify-center text-base shadow-sm shrink-0"}>
+                {currentCat.icon}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-extrabold text-slate-900 truncate">{currentCat.name}</p>
+                <p className="text-xs text-slate-400">{faqs.length} FAQ{faqs.length !== 1 ? "s" : ""}</p>
+              </div>
+            </>
+          )}
         </div>
+      </div>
 
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Categories</h3>
-        <nav className="space-y-1">
+      <div className="flex gap-6 pt-4">
+
+        {/* ── Left Sidebar (desktop + mobile overlay) ── */}
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex flex-col w-56 shrink-0 sticky top-20 self-start gap-1">
+          <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2 px-2">Categories</p>
           {CATEGORIES.map((cat) => {
-            const isActive = decodedCategory === cat.name;
+            const isActive = cat.name === decodeURIComponent(category || "");
             return (
               <button
                 key={cat.name}
-                onClick={() => { navigate("/faqs/" + encodeURIComponent(cat.name)); setSidebarOpen(false); }}
-                className={"w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-3 " + (
+                onClick={() => navigate("/faqs/" + encodeURIComponent(cat.name))}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left group ${
                   isActive
-                    ? "bg-gradient-to-r " + cat.color + " text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100"
-                )}
+                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                }`}
               >
-                <span className="text-base">{cat.icon}</span>
-                <span className="flex-1 leading-tight">{cat.name}</span>
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white/60" />}
+                <span className="text-base w-6 text-center">{cat.icon}</span>
+                <span className="flex-1 truncate text-xs">{cat.name}</span>
               </button>
             );
           })}
-        </nav>
+        </aside>
 
-        <div className="mt-6 pt-4 border-t border-slate-200 space-y-1">
-          <button onClick={() => { navigate("/"); setSidebarOpen(false); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-600 hover:bg-slate-100 transition-all">
-            🏠 <span>Home</span>
-          </button>
-          <button onClick={() => { navigate("/discussions"); setSidebarOpen(false); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-600 hover:bg-slate-100 transition-all">
-            💬 <span>Discussions</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 min-w-0">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-600 hover:text-slate-800 p-1">
-              <span className="text-xl">☰</span>
-            </button>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                {catMeta && (
-                  <span className={"w-8 h-8 rounded-xl bg-gradient-to-br " + catMeta.color + " flex items-center justify-center text-base shadow-sm"}>
-                    {catMeta.icon}
-                  </span>
-                )}
-                <h1 className="text-lg sm:text-xl font-bold text-slate-800">{decodedCategory}</h1>
+        {/* Mobile overlay sidebar */}
+        {sidebarOpen && (
+          <>
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl overflow-y-auto animate-slideRight">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                <p className="text-base font-extrabold text-slate-900">Categories</p>
+                <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500">✕</button>
               </div>
-              <p className="text-sm text-slate-400">
-                {loading ? "Loading..." : `${faqs.length} approved FAQ${faqs.length !== 1 ? "s" : ""}`}
-                {currentUser && <span className="ml-2 text-indigo-500 font-medium">— {currentUser.username}</span>}
-              </p>
+              <div className="p-3 space-y-1">
+                <button onClick={() => { setSidebarOpen(false); navigate("/"); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700">
+                  🏠 All FAQs
+                </button>
+                {CATEGORIES.map((cat) => {
+                  const isActive = cat.name === decodeURIComponent(category || "");
+                  return (
+                    <button
+                      key={cat.name}
+                      onClick={() => { setSidebarOpen(false); navigate("/faqs/" + encodeURIComponent(cat.name)); }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
+                        isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span className="text-base w-6 text-center">{cat.icon}</span>
+                      <span className="flex-1 truncate text-xs">{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          </>
+        )}
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 min-w-0">
+
+          {/* Desktop header */}
+          <div className="hidden md:flex items-center gap-3 mb-5">
+            {currentCat && (
+              <>
+                <div className={"w-12 h-12 rounded-2xl bg-gradient-to-br " + gradient + " flex items-center justify-center text-2xl shadow-md"}>
+                  {currentCat.icon}
+                </div>
+                <div>
+                  <h1 className="text-xl font-extrabold text-slate-900">{currentCat.name}</h1>
+                  <p className="text-sm text-slate-500">{faqs.length} frequently asked question{faqs.length !== 1 ? "s" : ""}</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Search */}
-          <div className="mt-3 flex gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder={"Search within " + decodedCategory + "..."}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white transition-all"
-              />
-            </div>
-            <button onClick={handleSearch} disabled={searchLoading}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 active:scale-95">
-              {searchLoading ? "..." : "Search"}
-            </button>
-            {searchPerformed && (
-              <button onClick={() => { setSearchPerformed(false); setSearchQuery(""); }}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm rounded-xl transition-all">
-                ✕
-              </button>
-            )}
+          <div className="relative mb-5">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search in this category..."
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:border-indigo-400 shadow-sm transition-all"
+            />
           </div>
-        </header>
 
-        {/* FAQ List */}
-        <main className="px-4 sm:px-6 lg:px-8 py-6">
+          {/* FAQ list */}
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 4, 6].map((i) => <SkeletonItem key={i} />)}
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((n) => <div key={n} className="h-24 bg-slate-200 rounded-2xl skeleton" />)}
             </div>
-          ) : displayFaqs.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <div className="text-5xl mb-4">🔍</div>
-              <p className="text-slate-500 font-medium text-lg mb-2">
-                {searchPerformed ? "No results for \"" + searchQuery + "\"" : "No FAQs in this category yet"}
-              </p>
-              <p className="text-slate-400 text-sm mb-4">
-                {searchPerformed ? "Try different keywords" : "Be the first to add one!"}
-              </p>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 animate-fadeIn">
+              <div className="text-5xl mb-3">🔍</div>
+              <p className="text-slate-700 font-bold text-lg mb-1">No FAQs found</p>
+              <p className="text-slate-400 text-sm mb-6">Be the first to ask about <strong>{currentCat?.name}</strong></p>
               <button onClick={() => navigate("/discussions")}
-                className="text-indigo-600 font-medium text-sm hover:underline">
-                Ask in Discussions →
+                className="btn-primary px-6 py-2.5 text-sm">
+                Ask on Discussions
               </button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {displayFaqs.map((faq) => {
-                const meta = CATEGORIES.find((c) => c.name === faq.category);
-                return (
-                  <div key={faq._id} className="faq-card bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                    {/* Card Header */}
-                    <div className="p-5 pb-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          {meta && (
-                            <span className={"inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg mb-2 " + meta.bg + " " + meta.text}>
-                              {meta.icon} {faq.category}
-                            </span>
-                          )}
-                          <h3 className="font-semibold text-slate-800 text-sm leading-snug">{faq.question}</h3>
-                        </div>
-                        <button
-                          onClick={() => setExpandedId(expandedId === faq._id ? null : faq._id)}
-                          className="shrink-0 w-7 h-7 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 flex items-center justify-center text-xs transition-all"
-                        >
-                          {expandedId === faq._id ? "▲" : "▼"}
-                        </button>
-                      </div>
+            <div className="space-y-3">
+              {filtered.map((faq, idx) => (
+                <div key={faq._id}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden social-card animate-slideUp"
+                  style={{ animationDelay: idx * 40 + "ms" }}
+                >
+                  {/* FAQ header */}
+                  <button
+                    className="w-full flex items-start gap-4 p-5 text-left"
+                    onClick={() => setActiveAnswer(activeAnswer === faq._id ? null : faq._id)}
+                  >
+                    {/* Vote column */}
+                    <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
+                      <span className="text-sm font-extrabold text-slate-700">👍</span>
+                      <span className="text-sm font-bold text-slate-800">{faq.upvotes || 0}</span>
                     </div>
 
-                    {/* Expanded Answer */}
-                    {expandedId === faq._id ? (
-                      <div className="px-5 pb-4">
-                        <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap border border-slate-100">
-                          {faq.answer}
-                        </div>
-                        <div className="flex items-center gap-3 mt-3">
-                          <button
-                            onClick={() => handleCopy(faq.answer, faq._id)}
-                            className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors">
-                            {copiedId === faq._id ? "✓ Copied" : "📋 Copy"}
-                          </button>
-                          <div className="flex items-center gap-1 text-xs text-slate-400 ml-auto">
-                            <span>👍</span><span>{faq.upvotes || 0}</span>
-                            <span className="mx-1">•</span>
-                            <span>📅</span><span>{formatDate(faq.createdAt)}</span>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1.5">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+                          Q
+                        </span>
+                        <p className="text-sm font-bold text-slate-900 leading-snug">{faq.question}</p>
+                      </div>
+
+                      {/* Expanded answer */}
+                      {activeAnswer === faq._id && (
+                        <div className="mt-3 animate-slideDown">
+                          <div className="h-px bg-slate-100 mb-3" />
+                          <div className="bg-slate-50 rounded-xl p-4">
+                            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{faq.answer}</p>
+                            <div className="flex items-center gap-2 mt-3">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); copyAnswer(faq.answer, faq._id); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition-all"
+                              >
+                                {copiedId === faq._id ? "✓ Copied" : "📋 Copy"}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="px-5 pb-4">
-                        <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">{faq.answer}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-slate-400">👍 {faq.upvotes || 0}</span>
-                          <span className="text-xs text-slate-400 ml-auto">Click to expand →</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+
+                    {/* Expand indicator */}
+                    <div className="shrink-0 pt-0.5">
+                      <svg
+                        className={"w-5 h-5 text-slate-400 transition-transform duration-200 " + (activeAnswer === faq._id ? "rotate-180" : "")}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </main>

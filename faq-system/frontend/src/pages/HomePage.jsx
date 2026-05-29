@@ -1,381 +1,310 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
 
 const CATEGORIES = [
-  { name: "About the Internship", icon: "🏢", color: "from-blue-500 to-blue-600", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", hover: "hover:bg-blue-50" },
-  { name: "Timing and Dates", icon: "📅", color: "from-green-500 to-green-600", bg: "bg-green-50", border: "border-green-200", text: "text-green-700", hover: "hover:bg-green-50" },
-  { name: "NOC", icon: "📋", color: "from-yellow-500 to-yellow-600", bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-700", hover: "hover:bg-yellow-50" },
-  { name: "Selection and Offer Letter", icon: "🎓", color: "from-purple-500 to-purple-600", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", hover: "hover:bg-purple-50" },
-  { name: "Work and Mentorship", icon: "💼", color: "from-red-500 to-red-600", bg: "bg-red-50", border: "border-red-200", text: "text-red-700", hover: "hover:bg-red-50" },
-  { name: "Communication Channels", icon: "💬", color: "from-pink-500 to-pink-600", bg: "bg-pink-50", border: "border-pink-200", text: "text-pink-700", hover: "hover:bg-pink-50" },
-  { name: "Interviews", icon: "🎯", color: "from-indigo-500 to-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", hover: "hover:bg-indigo-50" },
-  { name: "Certificate", icon: "📜", color: "from-teal-500 to-teal-600", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", hover: "hover:bg-teal-50" },
-  { name: "Rosetta", icon: "🪨", color: "from-orange-500 to-orange-600", bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700", hover: "hover:bg-orange-50" },
-  { name: "Phase 1 and Coursework", icon: "📚", color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700", hover: "hover:bg-cyan-50" },
-  { name: "Yaksha Chat", icon: "💭", color: "from-lime-500 to-lime-600", bg: "bg-lime-50", border: "border-lime-200", text: "text-lime-700", hover: "hover:bg-lime-50" },
-  { name: "ViBe Platform", icon: "🎨", color: "from-rose-500 to-rose-600", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", hover: "hover:bg-rose-50" },
-  { name: "Team Formation", icon: "👥", color: "from-amber-500 to-amber-600", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", hover: "hover:bg-amber-50" },
+  { name: "About the Internship", icon: "🏢", hue: "indigo" },
+  { name: "Timing and Dates", icon: "📅", hue: "emerald" },
+  { name: "NOC", icon: "📋", hue: "amber" },
+  { name: "Selection and Offer Letter", icon: "🎓", hue: "purple" },
+  { name: "Work and Mentorship", icon: "💼", hue: "rose" },
+  { name: "Communication Channels", icon: "💬", hue: "pink" },
+  { name: "Interviews", icon: "🎯", hue: "blue" },
+  { name: "Certificate", icon: "📜", hue: "teal" },
+  { name: "Rosetta", icon: "🪨", hue: "orange" },
+  { name: "Phase 1 and Coursework", icon: "📚", hue: "cyan" },
+  { name: "Yaksha Chat", icon: "💭", hue: "lime" },
+  { name: "ViBe Platform", icon: "🎨", hue: "fuchsia" },
+  { name: "Team Formation", icon: "👥", hue: "yellow" },
 ];
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-  });
+const ACCENT = {
+  indigo: ["from-indigo-500 to-blue-500", "bg-indigo-50", "text-indigo-600", "border-indigo-200"],
+  emerald: ["from-emerald-500 to-teal-500", "bg-emerald-50", "text-emerald-600", "border-emerald-200"],
+  amber: ["from-amber-500 to-orange-500", "bg-amber-50", "text-amber-600", "border-amber-200"],
+  purple: ["from-purple-500 to-fuchsia-500", "bg-purple-50", "text-purple-600", "border-purple-200"],
+  rose: ["from-rose-500 to-pink-500", "bg-rose-50", "text-rose-600", "border-rose-200"],
+  pink: ["from-pink-500 to-rose-500", "bg-pink-50", "text-pink-600", "border-pink-200"],
+  blue: ["from-blue-500 to-cyan-500", "bg-blue-50", "text-blue-600", "border-blue-200"],
+  teal: ["from-teal-500 to-green-500", "bg-teal-50", "text-teal-600", "border-teal-200"],
+  orange: ["from-orange-500 to-amber-500", "bg-orange-50", "text-orange-600", "border-orange-200"],
+  cyan: ["from-cyan-500 to-blue-500", "bg-cyan-50", "text-cyan-600", "border-cyan-200"],
+  lime: ["from-lime-500 to-green-500", "bg-lime-50", "text-lime-600", "border-lime-200"],
+  fuchsia: ["from-fuchsia-500 to-purple-500", "bg-fuchsia-50", "text-fuchsia-600", "border-fuchsia-200"],
+  yellow: ["from-yellow-500 to-amber-500", "bg-yellow-50", "text-yellow-700", "border-yellow-200"],
+};
+
+function StoryCard({ cat, onClick }) {
+  const [g, b, t, bd] = ACCENT[cat.hue] || ACCENT.indigo;
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-1.5 group shrink-0">
+      <div className={"w-14 h-14 rounded-2xl bg-gradient-to-br " + g + " flex items-center justify-center text-2xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"}>
+        {cat.icon}
+      </div>
+      <span className="text-xs font-semibold text-slate-600 text-center leading-tight line-clamp-2 w-16">{cat.name.split(" ")[0]}</span>
+    </button>
+  );
 }
 
-function SkeletonCard({ lines = 2 }) {
+function TrendingCard({ faq, rank, onClick }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
-      <div className="h-5 bg-slate-200 rounded w-3/4 mb-3" />
-      {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="h-3 bg-slate-100 rounded w-full mb-2" style={{ width: `${85 - i * 15}%` }} />
-      ))}
-      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-        <div className="h-5 bg-slate-100 rounded-full w-16" />
-        <div className="h-5 bg-slate-100 rounded-full w-12" />
+    <button
+      onClick={onClick}
+      className="w-full flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-200 hover:border-indigo-200 hover:shadow-md transition-all duration-200 text-left group"
+    >
+      <span className="text-2xl font-black text-slate-200 group-hover:text-indigo-200 transition-colors shrink-0 w-7 leading-none mt-0.5">
+        {String(rank).padStart(2, "0")}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">{faq.question}</p>
+        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+          <span>👍 {faq.upvotes || 0}</span>
+          <span>·</span>
+          <span>{faq.category}</span>
+        </p>
       </div>
-    </div>
+      <svg className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+}
+
+function CategoryCard({ cat, onClick }) {
+  const [g, b, t, bd] = ACCENT[cat.hue] || ACCENT.indigo;
+  return (
+    <button
+      onClick={onClick}
+      className={"flex items-center gap-3 p-4 rounded-2xl bg-white border border-slate-200 hover:shadow-md transition-all duration-200 text-left w-full group animate-popIn" +
+        (b && t && bd ? ` bg-opacity-60` : "")}
+    >
+      <div className={"w-11 h-11 rounded-xl bg-gradient-to-br " + g + " flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform"}>
+        {cat.icon}
+      </div>
+      <span className={"text-sm font-bold " + t + " flex-1"}>{cat.name}</span>
+      <svg className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   );
 }
 
 export default function HomePage() {
-  const [announcements, setAnnouncements] = useState([]);
-  const [trendingFaqs, setTrendingFaqs] = useState([]);
-  const [recentFaqs, setRecentFaqs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [announcements, setAnnouncements] = useState([]);
+  const [search, setSearch] = useState("");
+  const [allFaqs, setAllFaqs] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [searchResults, setSearchResults] = useState(null);
 
-  const fetchHomeData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [annRes, trendRes, recentRes] = await Promise.all([
-        api.get("/announcements"),
-        api.get("/faqs/trending"),
-        api.get("/faqs/recent"),
-      ]);
-      setAnnouncements(annRes.data.slice(0, 3));
-      setTrendingFaqs(trendRes.data);
-      setRecentFaqs(recentRes.data);
-    } catch (e) { /* silent */ }
-    finally { setLoading(false); }
+  useEffect(() => {
+    Promise.all([
+      api.get("/announcements").then((r) => r.data).catch(() => []),
+      api.get("/faqs").then((r) => r.data).catch(() => []),
+    ]).then(([ann, faqs]) => {
+      setAnnouncements(ann);
+      setAllFaqs(faqs);
+      setLoading(false);
+    });
   }, []);
 
-  useEffect(() => { fetchHomeData(); }, []);
+  const trending = [...allFaqs].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0)).slice(0, 5);
+  const recent = [...allFaqs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  const liveAnn = announcements.find((a) => a.isLive) || announcements[0];
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    setSearchLoading(true);
-    setSearchPerformed(true);
-    api.get("/faqs?search=" + encodeURIComponent(searchQuery)).then((res) => {
-      setSearchResults(res.data);
-    }).catch(() => {}).finally(() => setSearchLoading(false));
-  };
+  function handleSearch(e) {
+    e.preventDefault();
+    if (!search.trim()) { setSearchResults(null); return; }
+    const q = search.toLowerCase();
+    setSearchResults(allFaqs.filter((f) => f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)));
+  }
 
-  const clearSearch = () => {
-    setSearchQuery("");
-    setSearchPerformed(false);
-    setSearchResults([]);
-  };
+  function goToCategory(cat) {
+    navigate("/faqs/" + encodeURIComponent(cat));
+  }
+
+  const filteredByCat = categoryFilter
+    ? allFaqs.filter((f) => f.category === categoryFilter)
+    : [];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Announcement Banner */}
-      {announcements.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex items-center gap-3 overflow-x-auto">
-              <span className="text-lg">📢</span>
-              <div className="flex-1 min-w-0">
-                {announcements.map((a, i) => (
-                  <div key={a._id} className="flex items-baseline gap-2">
-                    <span className="font-semibold text-sm whitespace-nowrap">{a.title}</span>
-                    <span className="text-amber-100 text-sm truncate">{a.content}</span>
-                  </div>
-                ))}
-              </div>
+    <div className="max-w-6xl mx-auto px-4 pt-5 pb-28 md:pb-10 space-y-8">
+
+      {/* ── Hero / Search ── */}
+      <section className="text-center py-6">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-600 mb-4">
+          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+          Internship FAQ System — Live
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2 leading-tight">
+          Find answers to your<br />
+          <span className="gradient-text">internship questions</span>
+        </h1>
+        <p className="text-slate-500 text-sm mb-6">Everything you need to know, in one place</p>
+
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="relative max-w-lg mx-auto">
+          <div className="flex items-center bg-white border border-slate-300 rounded-2xl overflow-hidden shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">
+            <span className="pl-4 text-slate-400 text-lg">🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setSearchResults(null); }}
+              placeholder="Search FAQs..."
+              className="flex-1 px-3 py-3.5 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 border-none focus:ring-0"
+            />
+            <button type="submit" className="btn-primary m-1.5 px-5 py-2 text-sm rounded-xl">
+              Search
+            </button>
+          </div>
+        </form>
+
+        {/* Search results */}
+        {searchResults !== null && (
+          <div className="mt-4 max-w-lg mx-auto text-left animate-fadeIn">
+            <p className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">{searchResults.length} result{searchResults.length !== 1 ? "s" : ""}</p>
+            <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-md">
+              {searchResults.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-sm">No FAQs found. Try a different keyword.</div>
+              ) : (
+                searchResults.slice(0, 8).map((f) => (
+                  <button key={f._id} onClick={() => goToCategory(f.category)}
+                    className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors text-left">
+                    <span className="text-lg mt-0.5">{CATEGORIES.find((c) => c.name === f.category)?.icon || "📌"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 line-clamp-1">{f.question}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{f.category}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
+        )}
+      </section>
+
+      {/* ── Live Announcement Banner ── */}
+      {liveAnn && (
+        <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl px-5 py-4 shadow-lg shadow-indigo-500/20 animate-popIn">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">📢</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-extrabold text-sm">{liveAnn.title}</p>
+            <p className="text-indigo-200 text-xs mt-0.5 line-clamp-1">{liveAnn.content}</p>
+          </div>
+          <span className="shrink-0 hidden sm:flex items-center gap-1.5 text-xs font-bold text-indigo-200">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            Live
+          </span>
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white/90 text-sm font-medium">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              Live FAQ Database — 100+ Answers
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight">
-              Everything about your<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-300">
-                Internship
-              </span>
-            </h1>
-            <p className="text-indigo-200 text-lg sm:text-xl max-w-2xl mx-auto">
-              Find answers instantly or browse by category. Can't find yours? Ask the community.
-            </p>
-
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mt-8">
-              <div className="flex gap-2 bg-white rounded-2xl p-1.5 shadow-2xl">
-                <div className="flex-1 relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="Search 100+ FAQs..."
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:bg-white transition-colors"
-                  />
-                </div>
-                <button
-                  onClick={handleSearch}
-                  disabled={searchLoading}
-                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 disabled:opacity-60"
-                >
-                  {searchLoading ? "Searching..." : "Search"}
-                </button>
-              </div>
-              {searchPerformed && (
-                <button onClick={clearSearch} className="mt-2 text-sm text-indigo-200 hover:text-white transition-colors">
-                  Clear search
-                </button>
-              )}
-            </div>
-          </div>
+      {/* ── Category Stories Strip ── */}
+      <section>
+        <div className="flex items-center gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
+          {CATEGORIES.map((cat) => (
+            <StoryCard key={cat.name} cat={cat} onClick={() => goToCategory(cat.name)} />
+          ))}
         </div>
       </section>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-
-        {/* Search Results */}
-        {searchPerformed && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-800">
-                Search Results
-                <span className="ml-2 text-base font-normal text-slate-400">({searchResults.length} found)</span>
-              </h2>
-              <button onClick={clearSearch} className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
-                ✕ Clear
-              </button>
+      {/* ── Trending & Recent ── */}
+      {!loading && (trending.length > 0 || recent.length > 0) && (
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">🔥</span>
+              <h2 className="text-base font-extrabold text-slate-900">Trending</h2>
             </div>
-            {searchResults.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-                <div className="text-5xl mb-4">🔍</div>
-                <p className="text-slate-500 text-lg font-medium mb-2">No results for "{searchQuery}"</p>
-                <p className="text-slate-400 text-sm mb-4">Try different keywords or browse categories below</p>
-                <button onClick={() => navigate("/discussions")} className="text-indigo-600 font-medium text-sm hover:underline">
-                  Ask in Discussions →
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {searchResults.map((faq) => (
-                  <div key={faq._id} className="faq-card bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer"
-                    onClick={() => navigate("/faqs/" + encodeURIComponent(faq.category))}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-800 text-base leading-snug">{faq.question}</h3>
-                        <p className="text-slate-500 text-sm mt-2 line-clamp-2 leading-relaxed">{faq.answer}</p>
-                        <div className="flex items-center gap-2 mt-3">
-                          <span className={"badge " + (CATEGORIES.find(c => c.name === faq.category)?.bg || "bg-slate-100") + " " + (CATEGORIES.find(c => c.name === faq.category)?.text || "text-slate-600")}>
-                            {faq.category}
-                          </span>
-                          <span className="text-xs text-slate-400">👍 {faq.upvotes || 0}</span>
-                        </div>
-                      </div>
-                      <span className="text-2xl opacity-40 shrink-0">💡</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Categories Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">Browse Categories</h2>
-              <p className="text-slate-400 text-sm mt-1">Click any category to explore FAQs</p>
-            </div>
-            <button onClick={() => navigate("/discussions")} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors">
-              View all discussions →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => navigate("/faqs/" + encodeURIComponent(cat.name))}
-                className={"group relative bg-white rounded-2xl border border-slate-200 p-4 text-center transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-slate-300 active:scale-95 overflow-hidden " + cat.hover}
-              >
-                <div className={"w-10 h-10 rounded-xl bg-gradient-to-br " + cat.color + " flex items-center justify-center text-xl mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform" }>
-                  {cat.icon}
-                </div>
-                <p className="text-xs font-semibold text-slate-700 leading-tight">{cat.name}</p>
-                <div className={"absolute inset-0 bg-gradient-to-br " + cat.color + " opacity-0 group-hover:opacity-5 transition-opacity rounded-2xl"} />
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Trending FAQs */}
-        {!searchPerformed && trendingFaqs.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-lg shadow-sm">🔥</div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Trending FAQs</h2>
-                <p className="text-slate-400 text-sm">Most upvoted by the community</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {trendingFaqs.map((faq, i) => (
-                <div key={faq._id} className="faq-card bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer group"
-                  onClick={() => navigate("/faqs/" + encodeURIComponent(faq.category))}>
-                  <div className="flex items-start gap-3">
-                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors">
-                        {faq.question}
-                      </h3>
-                      <p className="text-slate-400 text-xs mt-1.5 line-clamp-2 leading-relaxed">{faq.answer}</p>
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className={"badge " + (CATEGORIES.find(c => c.name === faq.category)?.bg || "bg-slate-100") + " " + (CATEGORIES.find(c => c.name === faq.category)?.text || "text-slate-600")}>
-                          {faq.icon} {faq.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-1 text-xs text-slate-400">
-                      <span>👍</span><span>{faq.upvotes || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-400">
-                      <span>📅</span><span>{formatDate(faq.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              {trending.map((f, i) => (
+                <TrendingCard key={f._id} faq={f} rank={i + 1} onClick={() => goToCategory(f.category)} />
               ))}
             </div>
-          </section>
-        )}
-
-        {/* Recent FAQs */}
-        {!searchPerformed && recentFaqs.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-lg shadow-sm">📋</div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">Recently Added</h2>
-                <p className="text-slate-400 text-sm">Latest additions to the FAQ database</p>
-              </div>
-            </div>
-            {loading ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {recentFaqs.map((faq) => (
-                  <div key={faq._id} className="faq-card bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer group"
-                    onClick={() => navigate("/faqs/" + encodeURIComponent(faq.category))}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-800 text-sm leading-snug group-hover:text-indigo-600 transition-colors">
-                          {faq.question}
-                        </h3>
-                        <p className="text-slate-400 text-xs mt-1.5 line-clamp-2 leading-relaxed">{faq.answer}</p>
-                      </div>
-                      <span className="text-lg opacity-30 shrink-0 group-hover:opacity-60 transition-opacity">📌</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                      <span className={"badge " + (CATEGORIES.find(c => c.name === faq.category)?.bg || "bg-slate-100") + " " + (CATEGORIES.find(c => c.name === faq.category)?.text || "text-slate-600")}>
-                        {faq.category}
-                      </span>
-                      <span className="text-xs text-slate-400 ml-auto">{formatDate(faq.createdAt)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Discussions CTA */}
-        {!searchPerformed && (
-          <section className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl" />
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
-            </div>
-            <div className="relative p-10 sm:p-14 text-center">
-              <div className="text-5xl mb-4">💬</div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">Can't find what you need?</h2>
-              <p className="text-indigo-200 text-lg mb-6 max-w-md mx-auto">
-                Ask the community or browse unapproved questions in the Discussions section.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center">
-                <button
-                  onClick={() => navigate("/discussions")}
-                  className="px-6 py-3 bg-white text-indigo-700 font-semibold rounded-xl text-sm hover:bg-indigo-50 transition-all shadow-lg active:scale-95"
-                >
-                  Browse Discussions
-                </button>
-                <button
-                  onClick={() => navigate("/discussions")}
-                  className="px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-xl text-sm hover:bg-white/20 transition-all active:scale-95"
-                >
-                  Ask a Question
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📚</span>
-              <div>
-                <p className="text-white font-bold text-lg">FAQ System</p>
-                <p className="text-xs text-slate-500">Internship Knowledge Base</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6 text-sm">
-              <button onClick={() => navigate("/")} className="hover:text-white transition-colors">Home</button>
-              <button onClick={() => navigate("/discussions")} className="hover:text-white transition-colors">Discussions</button>
-              {currentUser?.role === "admin" && (
-                <button onClick={() => navigate("/admin")} className="hover:text-white transition-colors">Admin Panel</button>
-              )}
-            </div>
-            <p className="text-xs text-slate-600">© 2026 FAQ System</p>
           </div>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">✨</span>
+              <h2 className="text-base font-extrabold text-slate-900">Recent</h2>
+            </div>
+            <div className="space-y-2">
+              {recent.map((f, i) => (
+                <TrendingCard key={f._id} faq={f} rank={i + 1} onClick={() => goToCategory(f.category)} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Skeleton */}
+      {loading && (
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[[1, 2, 3], [4, 5, 6]].map((col, ci) => (
+            <div key={ci} className="space-y-2">
+              {col.map((n) => (
+                <div key={n} className="h-16 bg-slate-200 rounded-2xl skeleton" />
+              ))}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* ── Browse by Category ── */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-extrabold text-slate-900">Browse Categories</h2>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 hover:border-indigo-300 transition-all cursor-pointer"
+          >
+            <option value="">All topics</option>
+            {CATEGORIES.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}
+          </select>
         </div>
-      </footer>
+
+        {/* Filtered cat results */}
+        {filteredByCat.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {filteredByCat.map((f) => {
+              const cat = CATEGORIES.find((c) => c.name === f.category) || CATEGORIES[0];
+              return (
+                <button key={f._id} onClick={() => goToCategory(f.category)}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-200 hover:shadow-md transition-all text-left group animate-fadeIn">
+                  <div className={"w-10 h-10 rounded-xl bg-gradient-to-br " + (ACCENT[cat.hue]?.[0] || ACCENT.indigo[0]) + " flex items-center justify-center text-lg shadow-sm"}>
+                    {cat.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">{f.question}</p>
+                    <p className="text-xs text-slate-400 mt-1">👍 {f.upvotes || 0} · {f.category}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : categoryFilter ? (
+          <div className="text-center py-10 text-slate-400 text-sm">No FAQs in this category yet.</div>
+        ) : null}
+
+        {/* Category grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(categoryFilter ? CATEGORIES.filter((c) => c.name === categoryFilter) : CATEGORIES).map((cat, i) => (
+            <CategoryCard key={cat.name} cat={cat} onClick={() => goToCategory(cat.name)} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="text-center py-4">
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl px-6 py-8 shadow-xl">
+          <h3 className="text-white font-extrabold text-xl mb-2">Couldn't find the answer?</h3>
+          <p className="text-slate-400 text-sm mb-6">Ask the community and get help from other interns</p>
+          <button onClick={() => navigate("/discussions")}
+            className="btn-primary px-8 py-3 text-sm">
+            💬 Ask a Question — It's free
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
