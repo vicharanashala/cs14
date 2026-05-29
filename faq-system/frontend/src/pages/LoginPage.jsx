@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -27,7 +28,7 @@ export default function LoginPage() {
     }
   };
 
-  const { login } = {};
+  const { login } = useAuth();
 
   return (
     <div className="w-full">
