@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
+import AllFaqsPage from "./pages/AllFaqsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DiscussionPage from "./pages/DiscussionPage";
@@ -26,6 +27,7 @@ export default function App() {
 
         {/* Home — full landing page (no sidebar) */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/all-faqs" element={<AllFaqsPage />} />
 
         {/* Main app pages — with sidebar + topbar */}
         <Route path="/faqs/:category" element={<AppLayout><FaqPage /></AppLayout>} />
