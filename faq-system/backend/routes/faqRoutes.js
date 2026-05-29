@@ -83,20 +83,6 @@ router.patch("/:id/approve", verifyToken, verifyAdmin, async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-// PATCH /faqs/:id/approve
-router.patch("/:id/approve", verifyToken, verifyAdmin, async (req, res) => {
-  try {
-    const faq = await Faq.findById(req.params.id);
-    if (!faq) {
-      return res.status(404).json({ message: "FAQ not found" });
-    }
-    faq.status = "approved";
-    await faq.save();
-    res.json({ message: "FAQ approved", faq });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
 
 // PATCH /faqs/:id
 router.patch("/:id", verifyToken, verifyAdmin, async (req, res) => {

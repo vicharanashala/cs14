@@ -130,7 +130,11 @@ export default function DiscussionPage() {
       );
       setVoteErrors((prev) => ({ ...prev, [id]: "" }));
     }).catch((err) => {
-      if (err.response?.status === 400) setVoteErrors((prev) => ({ ...prev, [id]: "Already voted" }));
+      const msg = err.response?.status === 400
+        ? "Already voted"
+        : err.response?.data?.message || "Failed to upvote. Check console.";
+      setVoteErrors((prev) => ({ ...prev, [id]: msg }));
+      console.error(err);
     });
   };
 
@@ -142,7 +146,11 @@ export default function DiscussionPage() {
       );
       setVoteErrors((prev) => ({ ...prev, [id]: "" }));
     }).catch((err) => {
-      if (err.response?.status === 400) setVoteErrors((prev) => ({ ...prev, [id]: "Already voted" }));
+      const msg = err.response?.status === 400
+        ? "Already voted"
+        : err.response?.data?.message || "Failed to downvote. Check console.";
+      setVoteErrors((prev) => ({ ...prev, [id]: msg }));
+      console.error(err);
     });
   };
 
