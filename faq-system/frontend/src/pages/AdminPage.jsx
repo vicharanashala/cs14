@@ -156,9 +156,19 @@ export default function AdminPage() {
   }
 
   const CATEGORIES = [
-    "Academics", "Hostel", "Finance", "Library", "Sports",
-    "Clubs", "Events", "Health", "Transport", "Admin",
-    "IT Support", "Career", "Other",
+    "About the Internship",
+    "Timing and Dates",
+    "NOC",
+    "Selection and Offer Letter",
+    "Work and Mentorship",
+    "Communication Channels",
+    "Interviews",
+    "Certificate",
+    "Rosetta",
+    "Phase 1 and Coursework",
+    "Yaksha Chat",
+    "ViBe Platform",
+    "Team Formation",
   ];
 
   return (
