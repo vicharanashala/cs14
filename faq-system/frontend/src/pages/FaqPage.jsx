@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import api from "../api/axios";
 
 const HUE_MAP = {
@@ -57,27 +57,6 @@ export default function FaqPage() {
 
   return (
     <div className="flex gap-6 min-h-[calc(100vh-4rem)]">
-      {/* Left sidebar — desktop */}
-      <aside className="hidden lg:flex flex-col w-56 shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pr-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[rgb(var(--text-tertiary))] mb-3 px-2">
-          Categories
-        </p>
-        {Object.keys(HUE_MAP).map((cat) => (
-          <button
-            key={cat}
-            onClick={() => navigate(`/faqs/${encodeURIComponent(cat)}`)}
-            className={`w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
-              cat === decoded
-                ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-semibold"
-                : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))]"
-            }`}
-          >
-            <span>{CATEGORY_ICONS[cat]}</span>
-            <span className="truncate">{cat}</span>
-          </button>
-        ))}
-      </aside>
-
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Category header */}
