@@ -55,17 +55,17 @@ function NoticeBoard({ announcements }) {
   const [visible, setVisible] = useState(true);
   const [paused, setPaused] = useState(false);
 
-  if (!announcements.length || !visible) return null;
-  const current = announcements[idx];
-
-  const next = () => { setIdx((i) => (i + 1) % announcements.length); };
-  const prev = () => { setIdx((i) => (i - 1 + announcements.length) % announcements.length); };
-
+  // Timer — must stay after all useState calls (Rules of Hooks)
   useEffect(() => {
-    if (paused || announcements.length <= 1) return;
-    const t = setInterval(next, 4000);
+    if (!visible || paused || announcements.length <= 1) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % announcements.length), 4000);
     return () => clearInterval(t);
-  }, [paused, announcements.length]);
+  }, [visible, paused, announcements.length]);
+
+  if (!announcements.length || !visible) return null;
+
+  const next = () => setIdx((i) => (i + 1) % announcements.length);
+  const prev = () => setIdx((i) => (i - 1 + announcements.length) % announcements.length);
 
   return (
     <div className="mb-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-2xl overflow-hidden">
