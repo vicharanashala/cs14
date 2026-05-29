@@ -99,8 +99,8 @@ export default function DiscussionPage() {
 
   const handleUpvote = async (id, currentUpvotes) => {
     try {
-      const res = await api.post(`/discussions/${id}/upvote`);
-      setDiscussions((prev) => prev.map((d) => d._id === id ? { ...d, upvotes: res.data.upvotes } : d));
+      const res = await api.patch(`/discussions/${id}/upvote`);
+      setDiscussions((prev) => prev.map((d) => d._id === id ? { ...d, upvotes: res.upvotes } : d));
     } catch {
       toast({ type: "error", message: "Failed to upvote" });
     }
