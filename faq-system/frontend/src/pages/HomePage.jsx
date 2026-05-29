@@ -209,15 +209,18 @@ export default function HomePage() {
     Promise.all([
       api.get("/announcements").catch(() => ({ data: [] })),
       api.get("/faqs?limit=200").catch(() => ({ data: [] })),
-    ]).then(([annRes, faqRes]) => {
-      setAnnouncements(annRes.data.slice(0, 3));
+    ]).then(([announcementsData, faqsData]) => {
+      // axios interceptor unwraps response.data, so these are already arrays
+      const announcementsArr = Array.isArray(announcementsData) ? announcementsData : (announcementsData?.data || []);
+      const faqsArr = Array.isArray(faqsData) ? faqsData : (faqsData?.data || []);
+      setAnnouncements(announcementsArr.slice(0, 3));
       const grouped = {};
-      (faqRes.data || []).forEach((faq) => {
+      faqsArr.forEach((faq) => {
         if (!grouped[faq.category]) grouped[faq.category] = [];
         grouped[faq.category].push(faq);
       });
       setCategoryFaqs(grouped);
-      setAllFaqs(faqRes.data || []);
+      setAllFaqs(faqsArr);
       setLoading(false);
     });
   }, []);

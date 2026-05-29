@@ -231,9 +231,12 @@ export default function AdminPage() {
       api.get("/faqs").catch(() => ({ data: [] })),
       api.get("/announcements").catch(() => ({ data: [] })),
     ]).then(([dRes, fRes, aRes]) => {
-      setDiscussions(dRes.data || []);
-      setFaqs(fRes.data || []);
-      setAnnouncements(aRes.data || []);
+      const discussions = Array.isArray(dRes) ? dRes : (dRes?.data || []);
+      const faqs = Array.isArray(fRes) ? fRes : (fRes?.data || []);
+      const announcements = Array.isArray(aRes) ? aRes : (aRes?.data || []);
+      setDiscussions(discussions);
+      setFaqs(faqs);
+      setAnnouncements(announcements);
     }).finally(() => setLoading(false));
   };
 

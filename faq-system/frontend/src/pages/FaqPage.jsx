@@ -41,7 +41,7 @@ export default function FaqPage() {
     setLoading(true);
     setExpanded(null);
     api.get(`/faqs?category=${encodeURIComponent(decoded)}`)
-      .then((r) => setFaqs(r.data || []))
+      .then((r) => setFaqs(Array.isArray(r) ? r : (r?.data || [])))
       .catch(() => setFaqs([]))
       .finally(() => setLoading(false));
   }, [decoded]);

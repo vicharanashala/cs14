@@ -78,7 +78,7 @@ export default function AllFaqsPage() {
 
   useEffect(() => {
     api.get("/faqs?limit=500").then((r) => {
-      setAllFaqs(r.data || []);
+      setAllFaqs(Array.isArray(r) ? r : (r?.data || []));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

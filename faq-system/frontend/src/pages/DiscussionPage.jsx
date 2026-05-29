@@ -62,7 +62,7 @@ export default function DiscussionPage() {
     setLoading(true);
     const params = category !== "All" ? `?category=${encodeURIComponent(category)}` : "";
     api.get(`/discussions${params}`)
-      .then((r) => setDiscussions(r.data || []))
+      .then((r) => setDiscussions(Array.isArray(r) ? r : (r?.data || [])))
       .catch(() => toast({ type: "error", message: "Failed to load discussions" }))
       .finally(() => setLoading(false));
   };
