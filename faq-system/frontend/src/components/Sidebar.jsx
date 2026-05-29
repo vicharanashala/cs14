@@ -67,19 +67,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="px-4 py-4 border-b border-[rgb(var(--border-default))]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-black shadow-md">
-            FAQ
-          </div>
-          <div>
-            <span className="font-bold text-[rgb(var(--text-primary))] text-base tracking-tight">HelpDesk</span>
-            <p className="text-[10px] text-[rgb(var(--text-tertiary))] leading-tight">Internship FAQ System</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main nav */}
       <div className="px-3 py-4 flex-1 overflow-y-auto">
         {SIDEBAR_NAV.map((group) => (

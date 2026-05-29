@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/axios";
 
 const HUE_MAP = {
@@ -79,6 +79,7 @@ export default function FaqPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Search ${decoded} FAQs...`}
+            style={{ paddingLeft: "2.5rem" }}
             className="input-base pl-10"
           />
         </div>

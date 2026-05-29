@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BookOpen, Tag, MessageCircle, Users } from "lucide-react";
 import api from "../api/axios";
 
 const CATEGORIES = [
@@ -19,10 +20,10 @@ const CATEGORIES = [
 ];
 
 const STATS = [
-  { label: "Total FAQs", value: "105+", icon: "📖", color: "from-indigo-500 to-blue-500" },
-  { label: "Categories", value: "13", icon: "🏷️", color: "from-purple-500 to-pink-500" },
-  { label: "Discussions", value: "6", icon: "💬", color: "from-amber-500 to-orange-500" },
-  { label: "Weekly Users", value: "200+", icon: "👥", color: "from-emerald-500 to-teal-500" },
+  { label: "Total FAQs", value: "105+", icon: BookOpen, color: "from-indigo-500 to-blue-500" },
+  { label: "Categories", value: "13", icon: Tag, color: "from-purple-500 to-pink-500" },
+  { label: "Discussions", value: "6", icon: MessageCircle, color: "from-amber-500 to-orange-500" },
+  { label: "Weekly Users", value: "200+", icon: Users, color: "from-emerald-500 to-teal-500" },
 ];
 
 const FEATURES = [
@@ -94,19 +95,19 @@ export default function HomePage() {
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20">
           {/* Announcement banner */}
           {announcements.length > 0 && (
-            <div className="mb-10 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl animate-fade-in">
-              <span className="text-lg">📌</span>
+            <div className="mb-10 flex items-start gap-3 p-4 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-2xl animate-fade-in">
+              <span className="text-lg mt-0.5">📌</span>
               <div>
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{announcements[0].title}</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 line-clamp-2">{announcements[0].content}</p>
+                <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">{announcements[0].title}</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5 line-clamp-2">{announcements[0].content}</p>
               </div>
             </div>
           )}
 
           {/* Hero text */}
           <div className="text-center max-w-3xl mx-auto mb-14 animate-fade-in-up">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-xs font-semibold text-indigo-600 dark:text-indigo-300 mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-700 text-xs font-semibold text-indigo-800 dark:text-indigo-200 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
               Live · Updated May 2025
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[rgb(var(--text-primary))] leading-tight mb-5">
@@ -134,16 +135,19 @@ export default function HomePage() {
 
           {/* Stats row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: "0.15s" }}>
-            {STATS.map((stat) => (
+            {STATS.map((stat) => {
+              const IconComponent = stat.icon;
+              return (
               <div key={stat.label}
                 className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-2xl p-4 text-center hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-lg mb-2 mx-auto`}>
-                  {stat.icon}
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-2 mx-auto`}>
+                  <IconComponent size={18} color="white" strokeWidth={2.5} />
                 </div>
                 <p className="text-2xl font-black text-[rgb(var(--text-primary))]">{stat.value}</p>
                 <p className="text-xs text-[rgb(var(--text-tertiary))] font-medium">{stat.label}</p>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
