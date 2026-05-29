@@ -19,39 +19,35 @@ const SECTION_CATEGORIES = [
   "Rosetta",                     // Section 9
   "Phase 1 and Coursework",     // Section 10
   "Yaksha Chat",                 // Section 11
-  "ViBe Platform",               // Section 12
+  "ViBe Platform",              // Section 12
   "Team Formation",              // Section 13
 ];
 
-async function scrapeFaq() {
+async function migrateFaqs() {
   await mongoose.connect(MONGO_URI);
-  console.log("Fetching " + SCRAPE_URL + " with Puppeteer...");
 
+  // 1. Fetch live page with Puppeteer to get Q → category mapping
+  console.log("Fetching live page...");
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
-
   const page = await browser.newPage();
   await page.goto(SCRAPE_URL, { waitUntil: "networkidle2", timeout: 60000 });
-  await page.waitForSelector("details", { timeout: 30000 }).catch(function() {
-    console.log("Warning: details element not found — proceeding anyway");
-  });
+  await page.waitForSelector("details", { timeout: 30000 }).catch(function() {});
 
   const html = await page.content();
   const $ = cheerio.load(html);
 
-  const faqsToInsert = [];
+  // Build a liveQuestion → category map from the rendered page
+  const questionCategoryMap = {};
   let currentSectionIdx = -1;
 
-  // Walk DOM in document order; h2 headings set the current section,
-  // each <details> within that section is one FAQ (summary = question, first <p> = answer)
   $("*").each(function(_, el) {
     var tag = el.tagName.toLowerCase();
 
     if (tag === "h2") {
       var text = $(el).text().trim();
-      // Match "1. About the Internship §"
       var match = text.match(/^(\d+)\.\s+(.+?)\s*§?$/);
       if (match) {
         var num = parseInt(match[1], 10) - 1;
@@ -68,59 +64,68 @@ async function scrapeFaq() {
       var summaryEl = $(el).find("summary").first();
       var summaryText = summaryEl.text().trim().replace(/\s+/g, " ");
 
-      // Strip trailing "§" and leading number prefix e.g. "1.1 "
       var question = summaryText
         .replace(/^[\d.]+\s*/, "")
         .replace(/\s*§$/, "")
         .trim();
 
-      var answerEl = $(el).find("p").first();
-      var answer = answerEl.text().trim().replace(/\s+/g, " ");
-
-      if (question.length > 5 && answer.length > 5) {
-        faqsToInsert.push({
-          question: question,
-          answer: answer,
-          category: SECTION_CATEGORIES[currentSectionIdx],
-        });
-      }
+      questionCategoryMap[question] = SECTION_CATEGORIES[currentSectionIdx];
     }
   });
 
-  console.log("Extracted " + faqsToInsert.length + " potential FAQs\n");
+  await browser.close();
 
-  var inserted = 0;
-  var skipped = 0;
+  console.log("Live Q→category map has " + Object.keys(questionCategoryMap).length + " entries\n");
 
-  for (var i = 0; i < faqsToInsert.length; i++) {
-    var faq = faqsToInsert[i];
-    var existing = await Faq.findOne({ question: faq.question });
-    if (existing) {
-      console.log("Skipped: " + faq.question.slice(0, 60));
-      skipped++;
+  // 2. Find all existing FAQs with missing or empty category
+  const noCategoryCount = await Faq.countDocuments({
+    $or: [
+      { category: { $exists: false } },
+      { category: "" },
+      { category: null },
+    ],
+  });
+  console.log("FAQs needing category: " + noCategoryCount);
+
+  if (noCategoryCount === 0) {
+    console.log("Nothing to migrate.");
+    await mongoose.disconnect();
+    process.exit(0);
+  }
+
+  // 3. Update each FAQ that has a matching question in the live map
+  var updated = 0;
+  var notFound = 0;
+
+  var cursor = Faq.find({
+    $or: [
+      { category: { $exists: false } },
+      { category: "" },
+      { category: null },
+    ],
+  }).cursor();
+
+  for await (var faq of cursor) {
+    var match = questionCategoryMap[faq.question];
+    if (match) {
+      faq.category = match;
+      await faq.save();
+      console.log("Updated [" + match + "]: " + faq.question.slice(0, 60));
+      updated++;
     } else {
-      await Faq.create({
-        question: faq.question,
-        answer: faq.answer,
-        category: faq.category,
-        upvotes: 0,
-        status: "approved",
-        createdAt: new Date(),
-      });
-      console.log("Inserted [" + faq.category + "]: " + faq.question.slice(0, 60));
-      inserted++;
+      console.log("No live match for: " + faq.question.slice(0, 60));
+      notFound++;
     }
   }
 
-  console.log("\nScraping complete. Inserted " + inserted + ", Skipped " + skipped + " FAQs.");
+  console.log("\nMigration complete. Updated " + updated + ", not found " + notFound + ".");
 
-  await browser.close();
   await mongoose.disconnect();
   process.exit(0);
 }
 
-scrapeFaq().catch(async function(err) {
-  console.error("Scraping failed: " + err.message);
+migrateFaqs().catch(async function(err) {
+  console.error("Migration failed: " + err.message);
   try { await browser.close(); } catch (_) {}
   await mongoose.disconnect();
   process.exit(1);

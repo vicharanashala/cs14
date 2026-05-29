@@ -199,7 +199,7 @@ export default function HomePage() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
-                onClick={() => navigate(`/discussions?category=${encodeURIComponent(cat)}`)}
+                onClick={() => navigate("/faqs/" + encodeURIComponent(cat))}
                 className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm"
               >
                 {cat}
