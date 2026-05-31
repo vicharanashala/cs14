@@ -588,7 +588,7 @@ export default function DiscussionPage() {
       {/* Add Query Dialog Modal */}
       {showAskModal && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowAskModal(false)}>
-          <div className="bg-[rgb(var(--bg-surface))] rounded-2xl max-w-xl w-full border border-[rgb(var(--border-strong))] shadow-2xl overflow-hidden animate-scale-in">
+          <div className="bg-[rgb(var(--bg-surface))] rounded-2xl max-w-xl w-full border border-[rgb(var(--border-strong))] shadow-2xl overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] flex items-center justify-between">
               <h3 className="text-sm font-bold font-display text-[rgb(var(--text-primary))] flex items-center gap-2">
@@ -610,7 +610,8 @@ export default function DiscussionPage() {
                   required
                   placeholder="e.g. When is the NOC signature timeline?"
                   value={askForm.title}
-                  onChange={(e) => setAskForm(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) => { e.stopPropagation(); setAskForm(prev => ({ ...prev, title: e.target.value })); }}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-full input-base text-xs py-2 px-3"
                 />
               </div>
@@ -652,7 +653,8 @@ export default function DiscussionPage() {
                   </label>
                   <select
                     value={askForm.category}
-                    onChange={(e) => setAskForm(prev => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) => { e.stopPropagation(); setAskForm(prev => ({ ...prev, category: e.target.value })); }}
+                    onClick={(e) => e.stopPropagation()}
                     className="w-full input-base text-xs py-2 px-3"
                   >
                     {categories.map(c => (
@@ -671,7 +673,8 @@ export default function DiscussionPage() {
                   rows={4}
                   placeholder="Explain your issue, include deadlines, errors, or forms to sign..."
                   value={askForm.description}
-                  onChange={(e) => setAskForm(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => { e.stopPropagation(); setAskForm(prev => ({ ...prev, description: e.target.value })); }}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-full input-base text-xs py-2 px-3 resize-none"
                 />
               </div>
