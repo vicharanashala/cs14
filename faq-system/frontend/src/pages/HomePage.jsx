@@ -396,7 +396,7 @@ export default function HomePage() {
                 key={cat.name}
                 cat={cat}
                 count={count}
-                onClick={() => navigate(`/discussions?category=${encodeURIComponent(cat.name)}`)}
+                onClick={() => navigate(`/faqs/${encodeURIComponent(cat.name)}`)}
               />
             );
           })}
