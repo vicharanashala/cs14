@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { BookOpen, Tag, MessageCircle, Users, Search, TrendingUp, ChevronRight, Megaphone, X, AlertCircle, MessageSquare, ExternalLink, HelpCircle, Send } from "lucide-react";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
-import CategoryCard from "../components/CategoryCard";
+import CategoryBubble from "../components/CategoryBubble";
 import ToastContainer, { toast } from "../components/Toast";
 import { useCategories } from "../context/CategoryContext";
 
@@ -395,21 +395,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Treemap flex-wrap grid */}
-        <div className="flex flex-wrap gap-3 items-start">
-          {categories.map((cat, i) => {
-            const faqsInCat = categoryFaqs[cat.name] || [];
-            const count = faqsInCat.length;
-            return (
-              <CategoryCard
-                key={cat.name}
-                cat={cat}
-                count={count}
-                index={i}
-              />
-            );
-          })}
-        </div>
+        {/* Bubble cloud */}
+        <CategoryBubble
+          categories={categories.map(cat => ({
+            ...cat,
+            count: (categoryFaqs[cat.name] || []).length,
+          }))}
+        />
       </section>
 
       {/* ── Statistics Section ── */}
