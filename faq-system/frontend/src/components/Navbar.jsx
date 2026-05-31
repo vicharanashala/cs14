@@ -168,7 +168,6 @@ export default function Navbar() {
                 </span>
                 <UserBadgeChip
                   userId={currentUser.userId || currentUser._id}
-                  username={currentUser.username || currentUser.email || "User"}
                   className="hidden sm:flex"
                 />
                 {isAdmin && (
@@ -185,7 +184,7 @@ export default function Navbar() {
                     <div className="px-4 py-3 border-b border-[rgb(var(--border-default))]">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">{currentUser.username || currentUser.email || "User"}</p>
-                        <UserBadgeChip userId={currentUser.userId || currentUser._id} username="" />
+                        <UserBadgeChip userId={currentUser.userId || currentUser._id} />
                       </div>
                       <p className="text-xs text-[rgb(var(--text-tertiary))]">{currentUser.email || "Signed in"}</p>
                     </div>
