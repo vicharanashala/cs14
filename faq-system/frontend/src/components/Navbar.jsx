@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import CommandPalette from "./CommandPalette";
 import { toast } from "./Toast";
+import UserBadgeChip from "./UserBadgeChip";
 import api from "../api/axios";
 
 const NAV_ITEMS = [
@@ -159,6 +160,11 @@ export default function Navbar() {
                 <span className="text-sm font-medium text-[rgb(var(--text-primary))] hidden sm:block">
                   {currentUser.username || currentUser.email || "User"}
                 </span>
+                <UserBadgeChip
+                  userId={currentUser.userId || currentUser._id}
+                  username={currentUser.username || currentUser.email || "User"}
+                  className="hidden sm:flex"
+                />
                 {isAdmin && (
                   <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold">
                     Admin
@@ -171,7 +177,10 @@ export default function Navbar() {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-52 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl shadow-xl z-50 overflow-hidden animate-scale-in">
                     <div className="px-4 py-3 border-b border-[rgb(var(--border-default))]">
-                      <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">{currentUser.username || currentUser.email || "User"}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">{currentUser.username || currentUser.email || "User"}</p>
+                        <UserBadgeChip userId={currentUser.userId || currentUser._id} username="" />
+                      </div>
                       <p className="text-xs text-[rgb(var(--text-tertiary))]">{currentUser.email || "Signed in"}</p>
                     </div>
                     {isAdmin && (

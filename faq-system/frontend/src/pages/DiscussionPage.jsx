@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCategories } from "../context/CategoryContext";
 import { toast } from "../components/Toast";
 import ImageUpload from "../components/ImageUpload";
+import UserBadgeChip from "../components/UserBadgeChip";
 import { HelpCircle, ChevronDown, ChevronUp, MessageSquare, ThumbsUp, ThumbsDown, MessageCircle, AlertTriangle, X, Search, CheckCircle } from "lucide-react";
 
 const AVATAR_COLORS = [
@@ -480,7 +481,10 @@ export default function DiscussionPage() {
                                     <div className="flex items-center gap-2">
                                       <Avatar name={ans.author?.username || "Coordinator"} size="sm" />
                                       <div>
-                                        <p className="text-[11px] font-bold text-[rgb(var(--text-primary))]">{ans.author?.username || "Coordinator"}</p>
+                                        <UserBadgeChip
+                                          userId={ans.author?._id}
+                                          username={ans.author?.username || "Coordinator"}
+                                        />
                                         <p className="text-[9px] text-[rgb(var(--text-tertiary))]">{new Date(ans.createdAt).toLocaleDateString()}</p>
                                       </div>
                                     </div>

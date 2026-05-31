@@ -3,7 +3,9 @@ const Discussion = require("../models/Discussion");
 const User = require("../models/User");
 const Faq = require("../models/Faq");
 const Category = require("../models/Category");
+const UserProfile = require("../models/UserProfile");
 const { verifyToken, verifyAdmin } = require("../middleware/auth");
+const { checkAndAwardBadges } = require("../utils/badgeEngine");
 
 const router = express.Router();
 
@@ -48,6 +50,20 @@ router.patch("/discussions/:id/verify-answer", async (req, res) => {
     const sortedAnswers = [...discussion.answers].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
     discussion.answers = sortedAnswers;
     await discussion.save();
+
+    // Increment answersAccepted for the answer author
+    const answerAuthorId = answer.author;
+    try {
+      const profile = await UserProfile.findOneAndUpdate(
+        { userId: answerAuthorId },
+        { $inc: { "stats.answersAccepted": 1 } },
+        { new: true, upsert: true }
+      );
+      console.log(`[badgeEngine] answersAccepted for ${answerAuthorId}: ${profile.stats.answersAccepted}`);
+      await checkAndAwardBadges(answerAuthorId);
+    } catch (err) {
+      console.error("[badgeEngine] verify-answer error:", err.message);
+    }
 
     res.json(discussion);
   } catch (err) {

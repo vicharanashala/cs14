@@ -3,7 +3,9 @@ const multer = require("multer");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const Discussion = require("../models/Discussion");
+const UserProfile = require("../models/UserProfile");
 const { verifyToken } = require("../middleware/auth");
+const { checkAndAwardBadges } = require("../utils/badgeEngine");
 
 const router = express.Router();
 
@@ -52,6 +54,44 @@ const handleMulterError = (err, req, res, next) => {
   }
   next();
 };
+
+// ─── Helper: increment stat on discussion author ───────────────
+async function incrementAuthorStat(discussionId, statKey, inc = 1) {
+  try {
+    const discussion = await Discussion.findById(discussionId);
+    if (!discussion) return;
+    const authorId = discussion.author;
+    const profile = await UserProfile.findOneAndUpdate(
+      { userId: authorId },
+      { $inc: { [`stats.${statKey}`]: inc } },
+      { new: true, upsert: true }
+    );
+    console.log(`[badgeEngine] incremented stats.${statKey} for userId=${authorId} (now ${profile.stats[statKey]})`);
+    await checkAndAwardBadges(authorId);
+  } catch (err) {
+    console.error("[badgeEngine] incrementAuthorStat error:", err.message);
+  }
+}
+
+// ─── Helper: increment stat on answer author ───────────────────
+async function incrementAnswerAuthorStat(discussionId, answerId, statKey, inc = 1) {
+  try {
+    const discussion = await Discussion.findById(discussionId);
+    if (!discussion) return;
+    const answer = discussion.answers.id(answerId);
+    if (!answer) return;
+    const authorId = answer.author;
+    const profile = await UserProfile.findOneAndUpdate(
+      { userId: authorId },
+      { $inc: { [`stats.${statKey}`]: inc } },
+      { new: true, upsert: true }
+    );
+    console.log(`[badgeEngine] incremented stats.${statKey} for answer author=${authorId} (now ${profile.stats[statKey]})`);
+    await checkAndAwardBadges(authorId);
+  } catch (err) {
+    console.error("[badgeEngine] incrementAnswerAuthorStat error:", err.message);
+  }
+}
 
 // ─── POST /discussions/upload  — upload images (max 5) ──────────
 router.post("/upload", verifyToken, upload.array("images", 5), handleMulterError, (req, res) => {
@@ -125,6 +165,16 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     await discussion.save();
+
+    // Increment questionsAsked stat
+    const profile = await UserProfile.findOneAndUpdate(
+      { userId: req.user.userId },
+      { $inc: { "stats.questionsAsked": 1 } },
+      { new: true, upsert: true }
+    );
+    console.log(`[badgeEngine] questionsAsked for ${req.user.userId}: ${profile.stats.questionsAsked}`);
+    await checkAndAwardBadges(req.user.userId);
+
     res.status(201).json(discussion);
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -145,17 +195,29 @@ router.post("/:id/answers", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Discussion not found" });
     }
 
-    discussion.answers.push({
+    const newAnswer = {
       author: req.user.userId,
       content,
       createdAt: new Date(),
-    });
+    };
+    discussion.answers.push(newAnswer);
 
     if (discussion.status === "unanswered") {
       discussion.status = "pending";
     }
 
     await discussion.save();
+
+    // Increment answersGiven for the answer author
+    const answerId = discussion.answers[discussion.answers.length - 1]._id;
+    const profile = await UserProfile.findOneAndUpdate(
+      { userId: req.user.userId },
+      { $inc: { "stats.answersGiven": 1 } },
+      { new: true, upsert: true }
+    );
+    console.log(`[badgeEngine] answersGiven for ${req.user.userId}: ${profile.stats.answersGiven}`);
+    await checkAndAwardBadges(req.user.userId);
+
     res.status(201).json(discussion);
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -207,6 +269,9 @@ router.patch("/:id/upvote", verifyToken, async (req, res) => {
     discussion.upvotes += 1;
     discussion.votedBy.push(userId);
     await discussion.save();
+
+    // Increment upvotesReceived for the discussion author
+    await incrementAuthorStat(req.params.id, "upvotesReceived", 1);
 
     res.json({ upvotes: discussion.upvotes, downvotes: discussion.downvotes });
   } catch (err) {

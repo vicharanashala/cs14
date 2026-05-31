@@ -6,10 +6,12 @@ const userProfileSchema = new mongoose.Schema({
   rank: { type: String, enum: ["Newcomer", "Contributor", "Expert", "Mentor", "Hall of Fame"], default: "Newcomer" },
   points: { type: Number, default: 0 },
   badges: [{ type: mongoose.Schema.Types.ObjectId, ref: "Badge" }],
-  questionsAsked: { type: Number, default: 0 },
-  answersProvided: { type: Number, default: 0 },
-  helpfulVotes: { type: Number, default: 0 },
-  discussionsCreated: { type: Number, default: 0 },
+  stats: {
+    questionsAsked: { type: Number, default: 0 },
+    answersGiven: { type: Number, default: 0 },
+    answersAccepted: { type: Number, default: 0 },
+    upvotesReceived: { type: Number, default: 0 },
+  },
   updatedAt: { type: Date, default: Date.now },
 });
 

@@ -6,15 +6,16 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const Badge = require("./models/Badge");
 const UserProfile = require("./models/UserProfile");
 
+// Must match badgeEngine.js BADGE_DEFS exactly
 const DEFAULT_BADGES = [
-  { name: "First Step", description: "Asked your first question", icon: "🌱", tier: "bronze", criteria: "Ask your first FAQ question", points: 5 },
-  { name: "Helpful Hand", description: "First answer accepted as helpful", icon: "🤝", tier: "bronze", criteria: "Have your first answer upvoted", points: 10 },
-  { name: "Curious Mind", description: "Asked 5 questions", icon: "❓", tier: "bronze", criteria: "Ask 5 FAQ questions", points: 15 },
-  { name: "Rising Star", description: "Received 10 upvotes across all posts", icon: "⭐", tier: "silver", criteria: "Receive 10 total upvotes", points: 25 },
-  { name: "Expert Answer", description: "Provided 10 verified answers", icon: "🎓", tier: "silver", criteria: "Provide 10 answers", points: 50 },
-  { name: "Community Pillar", description: "Received 50 upvotes", icon: "🏅", tier: "gold", criteria: "Receive 50 total upvotes", points: 100 },
-  { name: "Top Contributor", description: "Ranked in the top 10 of the leaderboard", icon: "🏆", tier: "gold", criteria: "Reach top 10 on the leaderboard", points: 150 },
-  { name: "Hall of Fame", description: "Accumulated 500 points", icon: "👑", tier: "platinum", criteria: "Earn 500 points", points: 250 },
+  { name: "First Question",       description: "Asked your first question",        icon: "🙋", tier: "bronze",  criteria: "Ask your first question",              points: 5  },
+  { name: "First Answer",         description: "Gave your first answer",           icon: "💬", tier: "bronze",  criteria: "Give your first answer",              points: 5  },
+  { name: "Verified Contributor", description: "Had an answer accepted",           icon: "✅", tier: "silver",  criteria: "Have an answer accepted",             points: 15 },
+  { name: "Helping Hand",         description: "Gave 5 or more answers",           icon: "🤝", tier: "silver",  criteria: "Give 5 or more answers",              points: 20 },
+  { name: "Problem Solver",       description: "Had 3 or more answers accepted",   icon: "🛠️", tier: "silver",  criteria: "Have 3 or more answers accepted",      points: 25 },
+  { name: "Popular Voice",        description: "Received 10 or more upvotes",      icon: "⬆️", tier: "gold",    criteria: "Receive 10 or more upvotes",           points: 30 },
+  { name: "Community Champion",   description: "Had 10 or more answers accepted", icon: "🏆", tier: "gold",    criteria: "Have 10 or more answers accepted",     points: 50 },
+  { name: "Top Contributor",      description: "Gave 20 or more answers",          icon: "🌟", tier: "platinum", criteria: "Give 20 or more answers",             points: 75 },
 ];
 
 async function seed() {
