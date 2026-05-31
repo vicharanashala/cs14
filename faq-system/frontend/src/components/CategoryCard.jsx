@@ -1,145 +1,291 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const COLOR_MAP = {
-  "About the Internship":      { bg: "#4F86C6", light: "#E8F0FA" },
-  "Timing and Dates":          { bg: "#F4A261", light: "#FEF0E6" },
-  "NOC":                       { bg: "#2A9D8F", light: "#E6F5F3" },
-  "Selection and Offer Letter":{ bg: "#E76F51", light: "#FBEAE5" },
-  "Work and Mentorship":       { bg: "#6A4C93", light: "#EEE6F4" },
-  "Communication Channels":    { bg: "#1982C4", light: "#E5F1F9" },
-  "Interviews":                { bg: "#FF595E", light: "#FFEAEA" },
-  "Certificate":               { bg: "#FFCA3A", light: "#FFFBE6" },
-  "Rosetta":                   { bg: "#8AC926", light: "#EEF8E4" },
-  "Phase 1 and Coursework":    { bg: "#6A994E", light: "#EBF4E3" },
-  "Yaksha Chat":               { bg: "#BC4749", light: "#F5E6E6" },
-  "ViBe Platform":             { bg: "#E9C46A", light: "#FDF8E8" },
-  "Team Formation":            { bg: "#457B9D", light: "#E6EFF5" },
+/* ── Palette: saturated enough to pop on dark, not neon ── */
+const PALETTE = {
+  "About the Internship":      { hue: 214, sat: 62, light: 56 },  // blue
+  "Timing and Dates":          { hue: 30,  sat: 88, light: 64 },  // amber
+  "NOC":                       { hue: 168, sat: 58, light: 42 },  // teal
+  "Selection and Offer Letter":{ hue: 14,  sat: 72, light: 58 },  // red-orange
+  "Work and Mentorship":       { hue: 268, sat: 40, light: 48 },  // muted purple
+  "Communication Channels":    { hue: 204, sat: 78, light: 48 },  // sky blue
+  "Interviews":                { hue: 357, sat: 100,light: 61 },  // coral red
+  "Certificate":               { hue: 48,  sat: 100,light: 62 },  // golden yellow
+  "Rosetta":                   { hue: 88,  sat: 74, light: 52 },  // lime green
+  "Phase 1 and Coursework":    { hue: 104, sat: 52, light: 44 },  // forest green
+  "Yaksha Chat":               { hue: 356, sat: 60, light: 50 },  // crimson
+  "ViBe Platform":             { hue: 43,  sat: 82, light: 68 },  // warm gold
+  "Team Formation":            { hue: 203, sat: 48, light: 50 },  // slate blue
 };
 
-const DEFAULT_COLOR = { bg: "#94A3B8", light: "#F1F5F9" };
+const DEFAULT_PALETTE = { hue: 210, sat: 20, light: 55 };
 
-function lerp(a, b, t) {
-  return a + (b - a) * Math.max(0, Math.min(1, t));
+function hsl(h, s, l, a = 1) {
+  return `hsla(${h},${s}%,${l}%,${a})`;
 }
 
-/**
- * Scale FAQ count to card dimensions.
- * count=0  → 100×60  (min)
- * count=20 → 280×140 (max)
- * Linear interpolation in between.
- */
-function getCardDimensions(count) {
-  const minCount = 0;
-  const maxCount = 20;
-  const minW = 100, maxW = 280;
-  const minH = 60,  maxH = 140;
-
-  const raw = maxCount === minCount ? 0 : (count - minCount) / (maxCount - minCount);
-  const t = Math.max(0, Math.min(1, raw));
-
-  const width  = Math.round(lerp(minW, maxW, t));
-  const height = Math.round(lerp(minH, maxH, t));
-
-  return { width, height };
+/* Scale count → width/height (treemap) */
+function dims(count) {
+  const t = Math.min(count / 18, 1);
+  return {
+    w: Math.round(110 + t * 170),   // 110–280 px
+    h: Math.round(64  + t * 82),    //  64–146 px
+  };
 }
 
-export default function CategoryCard({ cat, count, onClick }) {
-  const [hovered, setHovered] = useState(false);
+/* ── Framer-inspired cubic-bezier for snappy feel ── */
+const EASING = "cubic-bezier(0.34, 1.56, 0.64, 1)"; // slight overshoot
+const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-  const { width, height } = getCardDimensions(count);
-  const colors = COLOR_MAP[cat.name] || DEFAULT_COLOR;
+/* Stagger delay (ms) per card index */
+const STAGGER_BASE = 60;
 
-  // Debug log on mount and when count changes
+export default function CategoryCard({ cat, count, index = 0 }) {
+  const [hovered, setHovered]   = useState(false);
+  const [entered, setEntered]   = useState(false);
+  const ref = useRef(null);
+
+  const p    = PALETTE[cat.name] || DEFAULT_PALETTE;
+  const { w, h } = dims(count);
+
+  /* Entrance: stagger-fade + scale up on mount */
   useEffect(() => {
-    console.debug(
-      `[CategoryCard] mounted: name=${cat.name} | count=${count} | ` +
-      `size=${width}×${height}px | color=${colors.bg}`
-    );
-  }, [cat.name, count, width, height, colors.bg]);
+    const delay = index * STAGGER_BASE;
+    const timer = setTimeout(() => setEntered(true), delay);
+    return () => clearTimeout(timer);
+  }, [index]);
 
-  // Determine text layout: longer names stack vertically on tall cards
-  const nameLines = cat.name.length > 16 && height >= 100 ? 2 : 1;
+  /* Scroll-triggered entrance via IntersectionObserver */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setEntered(true); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const bgColor      = hsl(p.hue, p.sat, p.light);
+  const bgColorDim   = hsl(p.hue, p.sat, p.light * 0.75);
+  const bgGlassLight = hsl(p.hue, p.sat * 0.5, p.light * 1.5, 0.12);
+  const bgGlassDark  = hsl(p.hue, p.sat * 0.8, p.light * 0.5, 0.25);
+  const textOnHover  = hsl(p.hue, 30, 98);
+  const textNative   = hsl(p.hue, p.sat * 0.7, 92);
+  const borderColor  = hsl(p.hue, p.sat, p.light * 0.9, 0.5);
+  const glowColor    = hsl(p.hue, p.sat, p.light, 0.35);
+  const pillBg       = hsl(p.hue, p.sat * 0.6, p.light * 1.1);
+  const pillText     = hsl(p.hue, p.sat, p.light * 0.3);
+
+  const fontSize = h >= 130 ? "11px" : h >= 100 ? "10px" : "9px";
+  const iconSize = h >= 120 ? "24px" : "19px";
+  const nameLong = cat.name.length > 18;
+  const tallCard = h >= 100;
 
   return (
     <button
-      onClick={onClick}
-      onMouseEnter={() => {
-        setHovered(true);
-        console.debug(`[CategoryCard] hover: ${cat.name}`);
-      }}
+      ref={ref}
+      onClick={() => window.location.href = `/faqs/${encodeURIComponent(cat.name)}`}
+      onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      /* Entrance animation: fade + scale from 0.85 → 1 */
       style={{
-        width,
-        height,
-        backgroundColor: hovered ? colors.bg : colors.light,
-        border: `2px solid ${colors.bg}`,
-        borderRadius: "12px",
-        transition: "all 200ms cubic-bezier(0.4, 0, 0.2, 1)",
-        transform: hovered ? "scale(1.04) translateY(-2px)" : "scale(1) translateY(0)",
+        position: "relative",
+        width: w,
+        height: h,
+        flexShrink: 0,
+        cursor: "pointer",
+        border: "none",
+        borderRadius: "16px",
+        outline: "none",
+        overflow: "visible",
+        padding: 0,
+
+        /* glassmorphism: dark frosted bg */
+        background: hovered
+          ? `linear-gradient(135deg, ${bgColor}dd, ${bgColorDim}cc)`
+          : `linear-gradient(135deg, ${hsl(p.hue, p.sat, 18, 0.85)}, ${hsl(p.hue, p.sat * 0.7, 12, 0.9)})`,
+
+        /* fine border — brutalist edge */
         boxShadow: hovered
-          ? `0 8px 24px ${colors.bg}40`
-          : "0 2px 8px rgba(0,0,0,0.06)",
+          ? `0 0 0 1.5px ${borderColor}, 0 12px 40px ${glowColor}, 0 0 60px ${glowColor}40`
+          : `0 0 0 1px ${hsl(p.hue, p.sat, 30, 0.25)}, 0 4px 16px rgba(0,0,0,0.4)`,
+
+        /* subtle brutalist: diagonal accent line */
+        clipPath: hovered
+          ? "polygon(0 0, 100% 0, 100% 100%, 0 100%)"
+          : "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
+
+        transform: hovered
+          ? `scale(1.06) translateY(-3px)`
+          : entered
+            ? "scale(1) translateY(0)"
+            : "scale(0.88) translateY(8px)",
+
+        opacity: entered ? (hovered ? 1 : 0.92) : 0,
+
+        transition: [
+          `transform 380ms ${EASING}`,
+          `opacity 400ms ${EASE_OUT}`,
+          `box-shadow 300ms ease`,
+          `background 300ms ease`,
+        ].join(", "),
+      }}
+    >
+      {/* Brutalist: top-left geometric accent */}
+      <div style={{
+        position: "absolute",
+        top: 0, left: 0,
+        width: "36px", height: "36px",
+        background: hovered ? "transparent" : hsl(p.hue, p.sat, p.light, 0.15),
+        borderRight: `1px solid ${hsl(p.hue, p.sat, p.light, 0.2)}`,
+        borderBottom: `1px solid ${hsl(p.hue, p.sat, p.light, 0.2)}`,
+        borderRadius: "0 0 10px 0",
+        transition: "all 300ms ease",
+        zIndex: 1,
+      }} />
+
+      {/* Glass shimmer overlay */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        borderRadius: "16px",
+        background: hovered
+          ? `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%)`
+          : `linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%)`,
+        transition: "all 350ms ease",
+        pointerEvents: "none",
+      }} />
+
+      {/* Glassmorphism: blurred frosted bar behind content */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        borderRadius: "16px",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        background: bgGlassDark,
+        border: `1px solid ${hsl(p.hue, p.sat, p.light, 0.18)}`,
+        opacity: hovered ? 0 : 0.6,
+        transition: "opacity 350ms ease",
+        pointerEvents: "none",
+      }} />
+
+      {/* Content stack */}
+      <div style={{
+        position: "relative",
+        zIndex: 2,
+        width: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: "4px",
-        padding: "8px",
-        cursor: "pointer",
-        flexShrink: 0,
-        overflow: "hidden",
-      }}
-    >
-      {/* Category icon */}
-      <span
-        style={{
-          fontSize: height >= 110 ? "22px" : "18px",
+        gap: tallCard ? "6px" : "4px",
+        padding: "10px 8px",
+      }}>
+        {/* Icon */}
+        <span style={{
+          fontSize: iconSize,
           lineHeight: 1,
-          filter: hovered ? "drop-shadow(0 1px 2px rgba(0,0,0,0.15))" : "none",
-          transition: "filter 200ms",
-        }}
-      >
-        {cat.icon || "📁"}
-      </span>
+          filter: hovered
+            ? `drop-shadow(0 0 8px ${bgColor})`
+            : `drop-shadow(0 1px 3px rgba(0,0,0,0.5))`,
+          transform: hovered ? "scale(1.15) rotate(-5deg)" : "scale(1) rotate(0deg)",
+          transition: `transform 350ms ${EASING}, filter 300ms ease`,
+          display: "block",
+        }}>
+          {cat.icon || "📁"}
+        </span>
 
-      {/* Category name */}
-      <span
-        style={{
-          fontSize: height >= 120 ? (cat.name.length > 20 ? "9px" : "10px") : "9px",
+        {/* Category name */}
+        <span style={{
+          fontSize,
           fontWeight: 700,
-          color: hovered ? "#FFFFFF" : colors.bg,
+          letterSpacing: "0.025em",
+          color: hovered ? textOnHover : textNative,
           textAlign: "center",
-          lineHeight: nameLines > 1 ? 1.3 : 1.4,
-          letterSpacing: "0.01em",
-          fontFamily: "inherit",
-          pointerEvents: "none",
-          maxWidth: "100%",
+          lineHeight: 1.4,
+          maxWidth: "92%",
           overflow: "hidden",
           textOverflow: "ellipsis",
-          whiteSpace: nameLines > 1 ? "normal" : "nowrap",
-          transition: "color 200ms",
-        }}
-      >
-        {cat.name}
-      </span>
-
-      {/* FAQ count pill */}
-      <span
-        style={{
-          fontSize: "9px",
-          fontWeight: 800,
-          color: hovered ? colors.bg : "#fff",
-          backgroundColor: hovered ? "rgba(255,255,255,0.85)" : colors.bg,
-          borderRadius: "20px",
-          padding: "2px 7px",
-          letterSpacing: "0.03em",
+          whiteSpace: nameLong && tallCard ? "normal" : "nowrap",
+          fontFamily: "'Inter', system-ui, sans-serif",
+          textShadow: hovered ? `0 1px 6px ${glowColor}` : "none",
+          transition: "color 280ms ease, text-shadow 280ms ease",
           pointerEvents: "none",
-          transition: "all 200ms",
-          boxShadow: hovered ? "none" : "0 1px 3px rgba(0,0,0,0.12)",
-        }}
-      >
-        {count} FAQ{count !== 1 ? "s" : ""}
-      </span>
+        }}>
+          {cat.name}
+        </span>
+
+        {/* FAQ count pill */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          background: hovered
+            ? `rgba(255,255,255,0.9)`
+            : `linear-gradient(135deg, ${hsl(p.hue, p.sat, p.light, 0.85)}, ${hsl(p.hue, p.sat * 0.8, p.light * 0.75, 0.9)})`,
+          borderRadius: "20px",
+          padding: "2px 9px",
+          boxShadow: hovered
+            ? `0 2px 8px rgba(0,0,0,0.25)`
+            : `0 1px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)`,
+          transform: hovered ? "scale(1.08)" : "scale(1)",
+          transition: `all 300ms ${EASING}`,
+          marginTop: "2px",
+        }}>
+          <span style={{
+            fontSize: "8px",
+            fontWeight: 900,
+            letterSpacing: "0.05em",
+            color: hovered ? pillText : hsl(p.hue, 20, 98),
+            fontFamily: "'Inter', system-ui, sans-serif",
+            pointerEvents: "none",
+          }}>
+            {count}
+          </span>
+          <span style={{
+            fontSize: "8px",
+            fontWeight: 600,
+            color: hovered ? pillText : hsl(p.hue, 20, 95),
+            fontFamily: "'Inter', system-ui, sans-serif",
+            pointerEvents: "none",
+          }}>
+            FAQ{count !== 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
+      {/* Hover: glowing bottom line accent */}
+      <div style={{
+        position: "absolute",
+        bottom: 0, left: "15%", right: "15%",
+        height: "2px",
+        background: `linear-gradient(90deg, transparent, ${textOnHover}90, transparent)`,
+        borderRadius: "2px 2px 0 0",
+        opacity: hovered ? 1 : 0,
+        transform: hovered ? "scaleX(1)" : "scaleX(0)",
+        transition: "all 350ms ease",
+      }} />
+
+      {/* Large faded category initial behind content (brutalist touch) */}
+      <div style={{
+        position: "absolute",
+        bottom: "-4px",
+        right: "6px",
+        fontSize: tallCard ? "38px" : "28px",
+        fontWeight: 900,
+        color: hsl(p.hue, p.sat, p.light, hovered ? 0.15 : 0.07),
+        fontFamily: "'Inter', system-ui, sans-serif",
+        lineHeight: 1,
+        userSelect: "none",
+        pointerEvents: "none",
+        transition: "color 350ms ease",
+        zIndex: 1,
+      }}>
+        {cat.name.charAt(0)}
+      </div>
     </button>
   );
 }

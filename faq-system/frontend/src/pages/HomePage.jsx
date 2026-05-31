@@ -374,21 +374,30 @@ export default function HomePage() {
 
       {/* ── Browse Categories Treemap ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold font-display text-[rgb(var(--text-primary))]">Browse Categories</h2>
-            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">
-              Rectangle size reflects how many FAQs each category has
+            <h2 className="text-xl font-bold font-display text-[rgb(var(--text-primary))]">Explore Topics</h2>
+            <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5 tracking-wide uppercase letter-spacing-wide">
+              Click any card to browse FAQs
             </p>
           </div>
-          <span className="text-[10px] text-[rgb(var(--text-tertiary))] bg-[rgb(var(--bg-hover))] px-2 py-1 rounded-full">
-            {Object.values(categoryFaqs).flat().length} total FAQs
-          </span>
+          <div className="flex items-center gap-2">
+            <span style={{
+              background: "linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-light)))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: 800,
+              fontSize: "13px",
+            }}>
+              {Object.values(categoryFaqs).flat().length} FAQs
+            </span>
+            <span className="text-[rgb(var(--text-tertiary))]"> across {categories.length} topics</span>
+          </div>
         </div>
 
         {/* Treemap flex-wrap grid */}
         <div className="flex flex-wrap gap-3 items-start">
-          {categories.map((cat) => {
+          {categories.map((cat, i) => {
             const faqsInCat = categoryFaqs[cat.name] || [];
             const count = faqsInCat.length;
             return (
@@ -396,7 +405,7 @@ export default function HomePage() {
                 key={cat.name}
                 cat={cat}
                 count={count}
-                onClick={() => navigate(`/faqs/${encodeURIComponent(cat.name)}`)}
+                index={i}
               />
             );
           })}
