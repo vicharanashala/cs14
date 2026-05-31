@@ -9,6 +9,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const userRoutes = require("./routes/userRoutes");
+const badgeRoutes = require("./routes/badgeRoutes");
 
 const path = require("path");
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -39,6 +40,7 @@ app.use("/admin", adminRoutes);
 app.use("/announcements", announcementRoutes);
 app.use("/categories", categoryRoutes);
 app.use("/users", userRoutes);
+app.use("/badges", badgeRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
