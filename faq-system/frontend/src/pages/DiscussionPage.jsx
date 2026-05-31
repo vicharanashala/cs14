@@ -486,10 +486,7 @@ export default function DiscussionPage() {
                                     <div className="flex items-center gap-2">
                                       <Avatar name={ans.author?.username || "Coordinator"} size="sm" />
                                       <div>
-                                        <UserBadgeChip
-                                          userId={ans.author?._id}
-                                          username={ans.author?.username || "Coordinator"}
-                                        />
+                                        <UserBadgeChip userId={ans.author?._id} />
                                         <p className="text-[9px] text-[rgb(var(--text-tertiary))]">{new Date(ans.createdAt).toLocaleDateString()}</p>
                                       </div>
                                     </div>
