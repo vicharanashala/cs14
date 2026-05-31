@@ -20,7 +20,9 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.3",
-    "puppeteer": "^25.1.0"
+    "multer": "^2.1.1",
+    "puppeteer": "^25.1.0",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "cheerio": "^1.2.0"

@@ -1,5 +1,13 @@
 const mongoose = require("mongoose");
 
+const imageSchema = new mongoose.Schema({
+  filename: { type: String, required: true },
+  originalName: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  size: { type: Number, required: true },
+  uploadedAt: { type: Date, default: Date.now },
+});
+
 const answerSchema = new mongoose.Schema({
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   content: { type: String, required: true },
@@ -32,6 +40,7 @@ const discussionSchema = new mongoose.Schema({
   votedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   answers: [answerSchema],
   comments: [commentSchema],
+  images: [imageSchema],
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -4,6 +4,7 @@ import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { useCategories } from "../context/CategoryContext";
 import { toast } from "../components/Toast";
+import ImageUpload from "../components/ImageUpload";
 import { HelpCircle, ChevronDown, ChevronUp, MessageSquare, ThumbsUp, ThumbsDown, MessageCircle, AlertTriangle, X, Search, CheckCircle } from "lucide-react";
 
 const AVATAR_COLORS = [
@@ -64,8 +65,9 @@ export default function DiscussionPage() {
 
   // Modal and accordion
   const [showAskModal, setShowAskModal] = useState(false);
-  const [askForm, setAskForm] = useState({ title: "", category: "About the Internship", description: "" });
+  const [askForm, setAskForm] = useState({ title: "", category: "About the Internship", description: "", images: [] });
   const [submitting, setSubmitting] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   // Accordion state
   const [expandedId, setExpandedId] = useState(null);
@@ -193,7 +195,8 @@ export default function DiscussionPage() {
       setAskForm({
         title: "",
         category: category !== "All" ? category : (categories[0]?.name || "About the Internship"),
-        description: ""
+        description: "",
+        images: []
       });
     }
   }, [showAskModal, category, categories]);
@@ -212,10 +215,11 @@ export default function DiscussionPage() {
         title: askForm.title,
         description: askForm.description,
         category: askForm.category,
+        images: askForm.images,
       });
       toast({ type: "success", message: "Discussion query posted!" });
       setShowAskModal(false);
-      setAskForm({ title: "", category: categories[0]?.name || "About the Internship", description: "" });
+      setAskForm({ title: "", category: categories[0]?.name || "About the Internship", description: "", images: [] });
       fetchAllData();
     } catch {
       toast({ type: "error", message: "Failed to post question" });
@@ -274,7 +278,7 @@ export default function DiscussionPage() {
           <p className="text-xs text-[rgb(var(--text-secondary))] mt-0.5">Participate in specific category support discussions.</p>
         </div>
         <button
-          onClick={() => currentUser ? setShowAskModal(true) : navigate("/login")}
+          onClick={() => { currentUser ? setShowAskModal(true) : navigate("/login"); }}
           className="w-full sm:w-auto px-4 py-2 bg-[rgb(var(--color-primary))] text-white text-xs font-bold font-display rounded-xl hover:bg-[rgb(var(--color-primary-hover))] transition-all shadow-sm flex items-center justify-center gap-1.5"
         >
           <HelpCircle size={14} />
@@ -435,6 +439,34 @@ export default function DiscussionPage() {
                           </p>
                         </div>
 
+                        {/* Images Gallery */}
+                        {d.images && d.images.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))] flex items-center gap-1">
+                              📷 Attached Images ({d.images.length})
+                            </h5>
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                              {d.images.map((img, idx) => (
+                                <div
+                                  key={img.filename || idx}
+                                  className="group relative aspect-square rounded-xl overflow-hidden border border-[rgb(var(--border-default))] bg-[rgb(var(--bg-hover))] shadow-sm"
+                                >
+                                  <img
+                                    src={`http://localhost:5000/discussions/uploads/${img.filename}`}
+                                    alt={img.originalName || "attachment"}
+                                    className="w-full h-full object-cover cursor-pointer"
+                                    onClick={() => setLightboxSrc(`http://localhost:5000/discussions/uploads/${img.filename}`)}
+                                    onError={(e) => { e.target.style.display = "none"; }}
+                                  />
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-white text-lg">🔍</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Verified & Predefined Answers Panel */}
                         <div className="space-y-3">
                           <h5 className="text-[10px] font-bold uppercase tracking-wider text-[rgb(var(--text-secondary))]">Answers ({d.answers?.length || 0})</h5>
@@ -555,7 +587,7 @@ export default function DiscussionPage() {
 
       {/* Add Query Dialog Modal */}
       {showAskModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowAskModal(false)}>
           <div className="bg-[rgb(var(--bg-surface))] rounded-2xl max-w-xl w-full border border-[rgb(var(--border-strong))] shadow-2xl overflow-hidden animate-scale-in">
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-[rgb(var(--border-default))] bg-[rgb(var(--bg-base))] flex items-center justify-between">
@@ -644,6 +676,17 @@ export default function DiscussionPage() {
                 />
               </div>
 
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-xs font-bold text-[rgb(var(--text-secondary))] mb-1 font-display">
+                  Attach Images <span className="font-normal text-[rgb(var(--text-tertiary))]">(optional)</span>
+                </label>
+                <ImageUpload
+                  images={askForm.images}
+                  onImagesChange={(imgs) => setAskForm(prev => ({ ...prev, images: imgs }))}
+                />
+              </div>
+
               <div className="flex justify-end gap-2 border-t border-[rgb(var(--border-default))] pt-4">
                 <button
                   type="button"
@@ -662,6 +705,27 @@ export default function DiscussionPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox for image preview */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 bg-black/85 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="Full preview"
+            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
