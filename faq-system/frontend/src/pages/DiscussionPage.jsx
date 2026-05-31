@@ -6,6 +6,8 @@ import { useCategories } from "../context/CategoryContext";
 import { toast } from "../components/Toast";
 import ImageUpload from "../components/ImageUpload";
 import UserBadgeChip from "../components/UserBadgeChip";
+import { useTypoCheck } from "../components/useTypoCheck";
+import GrammarCheckField from "../components/GrammarCheckField";
 import { HelpCircle, ChevronDown, ChevronUp, MessageSquare, ThumbsUp, ThumbsDown, MessageCircle, AlertTriangle, X, Search, CheckCircle } from "lucide-react";
 
 const AVATAR_COLORS = [
@@ -67,6 +69,9 @@ export default function DiscussionPage() {
   // Modal and accordion
   const [showAskModal, setShowAskModal] = useState(false);
   const [askForm, setAskForm] = useState({ title: "", category: "About the Internship", description: "", images: [] });
+  const typoCheck = useTypoCheck("");
+  // Reset typo checker when modal opens
+  useEffect(() => { if (showAskModal) typoCheck.onChange(""); }, [showAskModal]);
   const [submitting, setSubmitting] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
@@ -672,14 +677,31 @@ export default function DiscussionPage() {
                 <label className="block text-xs font-bold text-[rgb(var(--text-secondary))] mb-1 font-display">
                   Detailed Description
                 </label>
-                <textarea
-                  required
-                  rows={4}
+                <GrammarCheckField
+                  value={typoCheck.value}
+                  onChange={(val) => { console.log("[DP] GrammarCheckField onChange:", val); typoCheck.onChange(val); setAskForm(prev => ({ ...prev, description: val })); }}
+                  errors={typoCheck.errors}
+                  activeError={typoCheck.activeError}
+                  onActivateError={(err) => { console.log("[DP] onActivateError:", err); const idx = typoCheck.errors.findIndex(e => e.start === err.start); console.log("[DP] found idx:", idx); if (idx !== -1) typoCheck.setActiveError(typoCheck.errors[idx]); }}
+                  onDeactivateError={() => { console.log("[DP] onDeactivateError"); typoCheck.setActiveError(null); }}
+                  onSelectSuggestion={(err, replacement) => {
+                    const idx = typoCheck.errors.findIndex(e => e.start === err.start);
+                    console.log("[DP] onSelectSuggestion err=", err, "idx=", idx);
+                    if (idx !== -1) { typoCheck.resolve(idx, replacement); console.log("[DP] after resolve, typoCheck.value=", typoCheck.value); setAskForm(prev => ({ ...prev, description: typoCheck.value })); }
+                  }}
                   placeholder="Explain your issue, include deadlines, errors, or forms to sign..."
-                  value={askForm.description}
-                  onChange={(e) => { e.stopPropagation(); setAskForm(prev => ({ ...prev, description: e.target.value })); }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full input-base text-xs py-2 px-3 resize-none"
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    minHeight: "100px",
+                    fontSize: "13px",
+                    lineHeight: "1.65",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    background: "rgb(var(--bg-input))",
+                    border: "1px solid rgb(var(--border-default))",
+                    color: "rgb(var(--text-primary))",
+                  }}
                 />
               </div>
 
