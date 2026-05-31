@@ -4,7 +4,6 @@ import api from "../api/axios";
 const CategoryContext = createContext();
 
 const DEFAULT_ICONS = {
-  "About the Internship": "🎓",
   "Timing and Dates": "📅",
   "NOC": "📝",
   "Selection and Offer Letter": "✉️",
