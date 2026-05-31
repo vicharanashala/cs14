@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 /* ── HSL palette (unchanged) ── */
 const PALETTE = {
+  "About the Internship":      { h: 214, s: 62, l: 56 },
   "Timing and Dates":          { h: 30,  s: 88, l: 64 },
   "NOC":                       { h: 168, s: 58, l: 42 },
   "Selection and Offer Letter":{ h: 14,  s: 72, l: 58 },
