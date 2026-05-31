@@ -74,6 +74,7 @@ export default function DiscussionPage() {
   useEffect(() => { if (showAskModal) typoCheck.onChange(""); }, [showAskModal]);
   const [submitting, setSubmitting] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
+  useEffect(() => { console.log("[DP] lightboxSrc changed:", lightboxSrc); }, [lightboxSrc]);
 
   // Accordion state
   const [expandedId, setExpandedId] = useState(null);
@@ -461,10 +462,10 @@ export default function DiscussionPage() {
                                     src={`http://localhost:5000/discussions/uploads/${img.filename}`}
                                     alt={img.originalName || "attachment"}
                                     className="w-full h-full object-cover cursor-pointer"
-                                    onClick={(e) => { e.stopPropagation(); setLightboxSrc(`http://localhost:5000/discussions/uploads/${img.filename}`); }}
+                                    onClick={(e) => { console.log("[DP] image click:", img.filename); e.stopPropagation(); setLightboxSrc(`http://localhost:5000/discussions/uploads/${img.filename}`); }}
                                     onError={(e) => { e.target.style.display = "none"; }}
                                   />
-                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                                     <span className="text-white text-lg">🔍</span>
                                   </div>
                                 </div>
@@ -734,6 +735,7 @@ export default function DiscussionPage() {
         </div>
       )}
 
+      {/* Lightbox for image preview */}
       {/* Lightbox for image preview */}
       {lightboxSrc && (
         <div
