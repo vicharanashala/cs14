@@ -4,6 +4,7 @@ import AllFaqsPage from "./pages/AllFaqsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DiscussionPage from "./pages/DiscussionPage";
+import BadgesPage from "./pages/BadgesPage";
 import AdminPage from "./pages/AdminPage";
 import FaqPage from "./pages/FaqPage";
 import AppLayout from "./components/AppLayout";
@@ -32,6 +33,7 @@ export default function App() {
         {/* Main app pages — with sidebar + topbar */}
         <Route path="/faqs/:category" element={<AppLayout><FaqPage /></AppLayout>} />
         <Route path="/discussions" element={<AppLayout><DiscussionPage /></AppLayout>} />
+        <Route path="/badges" element={<AppLayout><BadgesPage /></AppLayout>} />
         <Route
           path="/admin"
           element={
