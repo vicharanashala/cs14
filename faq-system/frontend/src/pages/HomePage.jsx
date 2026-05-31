@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { BookOpen, Tag, MessageCircle, Users, Search, TrendingUp, ChevronRight, Megaphone, X, AlertCircle, MessageSquare, ExternalLink, HelpCircle, Send } from "lucide-react";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
+import CategoryCard from "../components/CategoryCard";
 import ToastContainer, { toast } from "../components/Toast";
 import { useCategories } from "../context/CategoryContext";
 
@@ -371,39 +372,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Browse Categories Grid ── */}
+      {/* ── Browse Categories Treemap ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-xl font-bold font-display text-[rgb(var(--text-primary))]">Browse Categories</h2>
-            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">Explore discussion boards and FAQs by category</p>
+            <p className="text-sm text-[rgb(var(--text-tertiary))] mt-0.5">
+              Rectangle size reflects how many FAQs each category has
+            </p>
           </div>
+          <span className="text-[10px] text-[rgb(var(--text-tertiary))] bg-[rgb(var(--bg-hover))] px-2 py-1 rounded-full">
+            {Object.values(categoryFaqs).flat().length} total FAQs
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {/* Treemap flex-wrap grid */}
+        <div className="flex flex-wrap gap-3 items-start">
           {categories.map((cat) => {
-            const hasFaqs = (categoryFaqs[cat.name] || []).length > 0;
+            const faqsInCat = categoryFaqs[cat.name] || [];
+            const count = faqsInCat.length;
             return (
-              <button
+              <CategoryCard
                 key={cat.name}
+                cat={cat}
+                count={count}
                 onClick={() => navigate(`/discussions?category=${encodeURIComponent(cat.name)}`)}
-                className="group text-left bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-default))] rounded-xl p-4 card-hover relative overflow-hidden"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[rgb(var(--bg-hover))] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
-                    {cat.icon || "📁"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold font-display text-[rgb(var(--text-primary))] truncate">{cat.name}</p>
-                    <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5 line-clamp-1">{cat.description || "Explore FAQs and discussions"}</p>
-                    {hasFaqs && (
-                      <span className="inline-flex items-center mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[rgb(var(--color-primary-light))] text-[rgb(var(--color-primary))]">
-                        {categoryFaqs[cat.name].length} FAQs
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
+              />
             );
           })}
         </div>
