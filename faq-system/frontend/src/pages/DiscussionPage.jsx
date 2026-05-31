@@ -461,7 +461,7 @@ export default function DiscussionPage() {
                                     src={`http://localhost:5000/discussions/uploads/${img.filename}`}
                                     alt={img.originalName || "attachment"}
                                     className="w-full h-full object-cover cursor-pointer"
-                                    onClick={() => setLightboxSrc(`http://localhost:5000/discussions/uploads/${img.filename}`)}
+                                    onClick={(e) => { e.stopPropagation(); setLightboxSrc(`http://localhost:5000/discussions/uploads/${img.filename}`); }}
                                     onError={(e) => { e.target.style.display = "none"; }}
                                   />
                                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
