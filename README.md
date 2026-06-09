@@ -6,7 +6,7 @@
 
 ---
 
-## 📚 Table of Contents
+## 📚 Table of Content
 
 * ✨ Features
 * 🏗️ System Architecture
