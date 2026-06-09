@@ -636,21 +636,6 @@ Shows:
 
 ---
 
-# 📸 Screenshots
-
-Add screenshots here:
-
-```md
-screenshots/
-├── homepage.png
-├── category-page.png
-├── query-page.png
-├── admin-dashboard.png
-└── chatbot.png
-```
-
----
-
 # 🚀 Future Enhancements
 
 * Real-time notifications
@@ -660,13 +645,6 @@ screenshots/
 * AI answer verification
 * Leaderboards
 * Community challenges
-
----
-
-# 👨‍💻 Contributors
-
-* Your Name
-* Team Members
 
 ---
 
